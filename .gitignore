@@ -1,0 +1,16 @@
+# Claude
+.claude
+CLAUDE.md
+
+# VS
+.vscode
+
+# Datos o archivos Pesados.
+*.xlsx
+
+# Pautas de talleres y tareas (NO las de ayudantías)
+# Cubre cualquier archivo/carpeta con "pauta"/"Pauta" dentro de Talleres/ o Tareas/,
+# en cualquier trimestre.
+**/Talleres/**/[Pp]auta*
+**/Tareas/**/[Pp]auta*
+

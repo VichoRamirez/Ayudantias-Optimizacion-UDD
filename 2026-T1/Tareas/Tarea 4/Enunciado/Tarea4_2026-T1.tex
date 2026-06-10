@@ -1,0 +1,526 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+\usepackage{caption}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% ── Colores ──────────────────────────────────────────────────────────────────
+\definecolor{uddblue}{RGB}{0, 75, 135}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{codegray}{RGB}{100, 100, 100}
+\definecolor{codegreen}{RGB}{0, 120, 0}
+\definecolor{codeblue}{RGB}{0, 0, 180}
+\definecolor{codered}{RGB}{160, 0, 0}
+
+% ── Estilo de código Python ───────────────────────────────────────────────────
+\lstset{
+    language     = Python,
+    backgroundcolor = \color{lightgray},
+    basicstyle   = \small\ttfamily,
+    keywordstyle = \color{codeblue}\bfseries,
+    commentstyle = \color{codegreen}\itshape,
+    stringstyle  = \color{codered},
+    numberstyle  = \tiny\color{codegray},
+    numbers      = left,
+    stepnumber   = 1,
+    breaklines   = true,
+    frame        = single,
+    rulecolor    = \color{gray!40},
+    tabsize      = 4,
+    showstringspaces = false,
+    literate =
+        {á}{{\'{a}}}1 {é}{{\'{e}}}1 {í}{{\'{i}}}1
+        {ó}{{\'{o}}}1 {ú}{{\'{u}}}1 {ñ}{{\~{n}}}1
+        {Á}{{\'{A}}}1 {É}{{\'{E}}}1 {Í}{{\'{I}}}1
+        {Ó}{{\'{O}}}1 {Ú}{{\'{U}}}1 {Ñ}{{\~{N}}}1
+}
+
+% ── Cajas de ayuda ────────────────────────────────────────────────────────────
+\tcbuselibrary{skins, breakable}
+\newtcolorbox{ayuda}[1]{
+    colback   = lightgray,
+    colframe  = uddblue,
+    fonttitle = \bfseries\small,
+    title     = {#1},
+    breakable,
+    left      = 6pt,
+    right     = 6pt,
+    top       = 4pt,
+    bottom    = 4pt
+}
+
+% ── Encabezado y pie ─────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray} IIP314W\,--\,Optimización Aplicada a Negocios}
+\fancyhead[R]{\small\color{gray} Tarea 4\,--\,2026-T1}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{colorlinks=true, linkcolor=uddblue, urlcolor=uddblue}
+
+% ── Espaciado entre párrafos ──────────────────────────────────────────────────
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ── Título ───────────────────────────────────────────────────────────────────
+\begin{center}
+    {\Large\bfseries\color{uddblue}
+     (IIP314W) Optimización Aplicada a Negocios}\\[0.4em]
+    {\large Universidad del Desarrollo}\\[0.8em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.5em]
+    {\LARGE\bfseries Tarea 4}\\[0.3em]
+    {\large Análisis de Sensibilidad y Precios Sombra}\\[0.5em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.8em]
+    \begin{tabular}{@{}ll@{}}
+        \textbf{Profesor:} & Ing.\ Rodrigo Trigo Vilches \\[0.3em]
+        \textbf{Ayudante:} & Lic.\ Vicente Ramírez Almonacid \\[0.3em]
+        \textbf{Período:}  & Año 2026\,--\,Trimestre 1
+    \end{tabular}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{0.5em}
+
+% =============================================================================
+\section*{Contexto: FrutaSur Procesados S.A.}
+% =============================================================================
+
+FrutaSur Procesados S.A.\ es una empresa mediana de la Región del Maule dedicada
+a la transformación de frutas de temporada en productos de valor agregado.
+Abastece a cadenas de supermercados y distribuidores a nivel nacional.
+
+La empresa fabrica tres líneas de productos:
+
+\begin{itemize}
+    \item \textbf{Jugo Natural (JN):} zumo embotellado sin conservantes elaborado
+          directamente desde fruta fresca.
+          Margen de contribución: \$120 por caja.
+    \item \textbf{Pulpa Congelada (PC):} pulpa procesada y sellada al vacío,
+          destinada a panaderías y restaurantes.
+          Margen de contribución: \$95 por caja.
+    \item \textbf{Mermelada Artesanal (MA):} elaborada con cocción lenta y
+          azúcar de caña.
+          Margen de contribución: \$180 por caja.
+\end{itemize}
+
+La planta opera de lunes a sábado con cuatro recursos productivos cuya
+disponibilidad semanal es fija:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Recurso} &
+\textbf{JN (por caja)} &
+\textbf{PC (por caja)} &
+\textbf{MA (por caja)} &
+\textbf{Disponible semanal} \\
+\midrule
+Fruta fresca (kg)    & 8     & 12   & 6    & 960  \\
+Azúcar (kg)          & 0{,}5 & 0    & 3    & 180  \\
+Horas de procesado   & 2     & 1{,}5 & 4   & 280  \\
+Horas de envasado    & 1     & 2    & 1{,}5 & 200 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Requerimientos de recursos por unidad producida.
+Fuente: elaboración propia.}
+\end{center}
+
+El objetivo de la empresa es \textbf{maximizar el margen de contribución
+semanal total}, sujeto a las disponibilidades de recursos indicadas.
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte A \quad Formulación del Modelo \hfill\normalfont\normalsize(20 pts)}
+% =============================================================================
+
+Formule el \textbf{modelo de programación lineal} correspondiente al problema
+de FrutaSur. Su formulación debe incluir:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Variables de decisión:} defínalas con precisión, indicando
+          unidades y dominio.
+    \item \textbf{Función objetivo:} expresión matemática del margen total a
+          maximizar.
+    \item \textbf{Restricciones:} una por cada recurso, con su nombre o
+          etiqueta al costado. Incluya restricciones de no negatividad.
+\end{enumerate}
+
+\noindent\textit{Nota: el modelo debe quedar completamente expresado en
+notación matemática estándar, no en código.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte B \quad Resolución con Gurobi \hfill\normalfont\normalsize(20 pts)}
+% =============================================================================
+
+Implemente el modelo de la Parte~A en \texttt{gurobipy} y resuélvalo.
+Responda:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Reporte la \textbf{solución óptima}: cantidad de cajas de cada
+          producto a producir semanalmente.
+    \item Reporte el \textbf{valor óptimo} de la función objetivo.
+    \item ¿Qué restricciones están \textbf{activas} (holgura\,=\,0) en la
+          solución óptima? ¿Cuáles tienen holgura positiva y cuánto vale?
+    \item Interprete en \textbf{lenguaje de negocios}: ¿qué significa que
+          una restricción tenga holgura cero? ¿Y holgura positiva?
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Holguras en Gurobi}
+\vspace{2pt}
+Luego de \texttt{model.optimize()}, acceda a las holguras de las restricciones:
+\begin{lstlisting}
+for c in model.getConstrs():
+    print(f"{c.ConstrName:20s}  slack = {c.Slack:.4f}")
+\end{lstlisting}
+Para que el nombre sea informativo, asegúrese de nombrarlo al crear la
+restricción:
+\begin{lstlisting}
+model.addConstr(8*x_JN + 12*x_PC + 6*x_MA <= 960,
+                name="fruta_fresca")
+\end{lstlisting}
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte C \quad Análisis de Sensibilidad \hfill\normalfont\normalsize(40 pts)}
+% =============================================================================
+
+% ── C.1 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.1 \quad Precios Sombra \hfill\normalfont\normalsize(15 pts)}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Obtenga el \textbf{precio sombra} $\pi_i$ de cada restricción.
+    \item Para cada restricción activa, interprete $\pi_i$ en lenguaje de
+          negocios: ¿cuánto aumentaría el margen semanal si se dispusiera
+          de una unidad adicional de ese recurso?
+    \item Identifique el recurso con el \textbf{mayor precio sombra}:
+          ¿en cuál convendría invertir prioritariamente para aumentar la
+          rentabilidad semanal?
+    \item ¿Por qué las restricciones con holgura positiva tienen precio
+          sombra igual a cero? Explique la intuición económica.
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Precios sombra en Gurobi}
+\begin{lstlisting}
+print(f"{'Restriccion':<20}  {'Pi (precio sombra)':>20}")
+print("-" * 44)
+for c in model.getConstrs():
+    print(f"{c.ConstrName:<20}  {c.Pi:>20.4f}")
+\end{lstlisting}
+\texttt{c.Pi} entrega el valor dual de la restricción, es decir, el cambio
+en el valor óptimo por unidad adicional del RHS\@ (precio sombra~$\pi_i$).
+Solo tiene sentido consultarlo cuando el modelo está en estado
+\texttt{GRB.OPTIMAL}.
+\end{ayuda}
+
+\vspace{0.5em}
+\newpage
+% ── C.2 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.2 \quad Rango de la Función Objetivo \hfill\normalfont\normalsize(15 pts)}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Obtenga el \textbf{rango de variación del coeficiente de la FO}
+          para cada variable: ¿cuánto puede subir o bajar el margen de
+          un producto sin que cambie el plan óptimo de producción?
+    \item Presente los resultados en una tabla con columnas:
+          \emph{Producto | Margen actual | Límite inferior | Límite superior}.
+    \item Analice el producto con el rango \textbf{más estrecho}:
+          ¿qué tan sensible es el plan óptimo a variaciones en su margen?
+          ¿Qué implicancia tiene para la gerencia de ventas?
+    \item Analice el producto con el rango \textbf{más amplio}:
+          ¿qué significa en términos prácticos que su coeficiente pueda
+          variar ampliamente sin alterar la solución?
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Ranging de la función objetivo en Gurobi}
+\begin{lstlisting}
+print(f"{'Variable':<10}  {'Obj':>8}  {'SAObjLow':>12}  {'SAObjUp':>12}")
+print("-" * 46)
+for v in model.getVars():
+    print(f"{v.VarName:<10}  {v.Obj:>8.2f}  "
+          f"{v.SAObjLow:>12.4f}  {v.SAObjUp:>12.4f}")
+\end{lstlisting}
+\texttt{v.SAObjLow} y \texttt{v.SAObjUp} son los límites del intervalo en
+que puede variar el coeficiente de \texttt{v} en la FO \emph{manteniendo
+la misma base óptima} (y por tanto el mismo plan de producción).
+\end{ayuda}
+
+\vspace{0.5em}
+\newpage
+% ── C.3 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.3 \quad Rango del Lado Derecho (RHS) \hfill\normalfont\normalsize(10 pts)}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Obtenga el \textbf{rango de variación del RHS} para cada
+          restricción: ¿en qué intervalo puede variar la disponibilidad
+          de cada recurso para que los precios sombra de C.1 sigan siendo
+          válidos?
+    \item Presente los resultados en una tabla con columnas:
+          \emph{Restricción | RHS actual | Límite inferior | Límite superior}.
+    \item La empresa tiene la opción de adquirir fruta fresca adicional en
+          el mercado spot al precio de \$4 por kg. Según el análisis de
+          sensibilidad: ¿conviene comprarla? ¿Hasta cuántos kg adicionales
+          sería rentable adquirir? Justifique su respuesta con los valores
+          obtenidos.
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Ranging del RHS en Gurobi}
+\begin{lstlisting}
+print(f"{'Restriccion':<20}  {'RHS':>8}  {'SARHSLow':>12}  {'SARHSUp':>12}")
+print("-" * 56)
+for c in model.getConstrs():
+    print(f"{c.ConstrName:<20}  {c.RHS:>8.2f}  "
+          f"{c.SARHSLow:>12.4f}  {c.SARHSUp:>12.4f}")
+\end{lstlisting}
+\texttt{c.SARHSLow} y \texttt{c.SARHSUp} entregan el intervalo en que puede
+variar el RHS de la restricción~\texttt{c} sin que cambie la \emph{base
+óptima} (y por tanto sin que cambie el precio sombra). Fuera de este rango,
+la base cambia y los precios sombra dejan de ser válidos.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+\newpage
+% =============================================================================
+\section*{Parte D \quad Análisis Paramétrico \hfill\normalfont\normalsize(20 pts)}
+% =============================================================================
+
+% ── D.1 ──────────────────────────────────────────────────────────────────────
+\subsection*{D.1 \quad Variación del margen de la Mermelada Artesanal}
+
+El equipo comercial ha informado que el margen de la MA podría fluctuar
+entre \$80 y \$280 por caja según las condiciones del mercado.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Resuelva el modelo para \textbf{al menos 40 valores} del margen
+          de la MA en el rango $[80,\,280]$. Registre el valor óptimo de
+          la FO y la solución $(x_{JN}^*,\,x_{PC}^*,\,x_{MA}^*)$ para cada
+          valor.
+    \item Grafique el \textbf{valor óptimo} (eje $y$) en función del margen
+          de la MA (eje $x$). Identifique y anote en el gráfico los
+          \textbf{puntos de quiebre} (valores donde cambia el plan óptimo).
+    \item En un segundo gráfico, trace las \textbf{cantidades óptimas de
+          cada producto} (tres curvas en el mismo eje) en función del margen
+          de la MA.
+    \item ¿En qué valor del margen la MA deja de producirse (o comienza
+          a producirse)? Compare este valor con el rango obtenido en la
+          Parte~C.2. ¿Coinciden? ¿Por qué?
+\end{enumerate}
+
+\vspace{0.5em}
+
+% ── D.2 ──────────────────────────────────────────────────────────────────────
+\subsection*{D.2 \quad Variación de la disponibilidad de fruta fresca}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Resuelva el modelo para \textbf{al menos 40 valores} de la
+          disponibilidad de fruta fresca en el rango $[400,\,1600]$\,kg.
+          Registre el valor óptimo de la FO para cada valor.
+    \item Grafique el \textbf{valor óptimo} en función de la disponibilidad
+          de fruta. Identifique y marque los \textbf{puntos de quiebre}
+          (cambios de pendiente).
+    \item ¿Cómo se relaciona la \textbf{pendiente} del gráfico, en cada
+          tramo, con el precio sombra de la restricción de fruta calculado
+          en C.1? ¿Qué ocurre con la pendiente cuando la restricción pasa
+          de activa a inactiva?
+    \item Verifique que los rangos del RHS obtenidos en C.3 se
+          \textbf{corresponden con los puntos de quiebre} observados en
+          el gráfico. ¿Coinciden?
+\end{enumerate}
+\newpage
+\begin{ayuda}{Ayuda -- Análisis paramétrico en Gurobi}
+Para variar un parámetro y resolver el modelo múltiples veces:
+\begin{lstlisting}
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Silenciar output de Gurobi antes del loop
+model.Params.OutputFlag = 0
+
+# --- D.1: variar coeficiente de la FO ---
+margenes_MA = np.linspace(80, 280, 50)
+valores_opt  = []
+plan_JN, plan_PC, plan_MA = [], [], []
+
+for c_MA in margenes_MA:
+    x_MA.Obj = c_MA          # actualizar coeficiente
+    model.update()
+    model.optimize()
+    if model.Status == GRB.OPTIMAL:
+        valores_opt.append(model.ObjVal)
+        plan_JN.append(x_JN.X)
+        plan_PC.append(x_PC.X)
+        plan_MA.append(x_MA.X)
+
+# Restaurar coeficiente original
+x_MA.Obj = 180
+model.update()
+
+# --- D.2: variar RHS de fruta fresca ---
+constr_fruta = model.getConstrByName("fruta_fresca")
+disponibilidades = np.linspace(400, 1600, 50)
+valores_opt_fruta = []
+
+for b in disponibilidades:
+    constr_fruta.RHS = b     # actualizar RHS
+    model.update()
+    model.optimize()
+    if model.Status == GRB.OPTIMAL:
+        valores_opt_fruta.append(model.ObjVal)
+
+# Restaurar RHS original
+constr_fruta.RHS = 960
+model.update()
+\end{lstlisting}
+Recuerde restaurar los parámetros originales al final de cada loop para no
+arrastrar cambios a la siguiente parte.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Entregables}
+% =============================================================================
+
+\subsection*{1.\quad Informe (PDF)}
+
+Estructura mínima requerida:
+
+\begin{enumerate}[leftmargin=*, topsep=2pt]
+    \item \textbf{Portada:} nombre del curso, Tarea~4, integrantes, fecha.
+    \item \textbf{Índice.}
+    \item \textbf{Introducción:} descripción del problema y objetivos del
+          análisis. 
+    \item \textbf{Marco teórico:} Conceptos importantes que se deben definir
+          para entender el problema y desarrollo.
+    \item \textbf{Desarrollo:} Partes A, B, C y D con sus respectivas
+          preguntas respondidas.
+    \item \textbf{Resultados:} Outputs, valores numericos, tablas, figuras, etc.
+    \item \textbf{Conclusiones:} Principales observaciones, explicaciones e interpretaciones.
+    \item \textbf{Referencias} (si aplica).
+\end{enumerate}
+
+\textbf{Formalidades} (se descuentan puntos por incumplimiento):
+
+\begin{itemize}[topsep=2pt]
+    \item Lenguaje técnico y formal, sin errores ortográficos ni gramaticales.
+    \item Texto justificado, fuente tamaño 12.
+    \item Cada sección comienza en una nueva página.
+    \item Cada figura, gráfico o tabla debe tener \textbf{título y fuente}
+          (elaboración propia si corresponde).
+\end{itemize}
+
+\subsection*{2.\quad Cuaderno Jupyter (.ipynb)}
+
+\begin{itemize}[topsep=2pt]
+    \item Implementación del modelo en \texttt{gurobipy} (Parte~B).
+    \item Extracción e impresión de holguras, precios sombra y rangos
+          (Parte~C).
+    \item Código del análisis paramétrico con los gráficos solicitados
+          (Parte~D).
+    \item Comentarios explicativos en cada sección del código.
+    \item Código limpio, ordenado y bien estructurado.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Formato de entrega:} comprima el informe y el notebook en
+un archivo \texttt{.zip} o \texttt{.rar} con el nombre
+\texttt{Tarea4\_GrupoN}. \textbf{No entregue los archivos por separado.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Plazos y Evaluación}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Plazo de entrega:} Viernes 15 de mayo a las 23:59.
+    \item \textbf{Grupos:} 2 a 3 integrantes (se recomienda 3).
+    \item \textbf{Inscripción:} anótense en los grupos de Canvas
+          (Personas~$\to$ Grupos~$\to$ Tarea~4\,--\,Grupo~n), incluso
+          si trabajan solos.
+\end{itemize}
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lc}
+\toprule
+\textbf{Criterio} & \textbf{Ponderación} \\
+\midrule
+Parte A: Formulación del modelo                      & 20\,\% \\
+Parte B: Resolución e interpretación                 & 20\,\% \\
+Parte C: Análisis de sensibilidad                    & 40\,\% \\
+Parte D: Análisis paramétrico y gráficos             & 20\,\% \\
+\midrule
+\textit{Calidad del informe y profundidad del análisis} &
+\textit{transversal} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Criterios de evaluación. Fuente: elaboración propia.}
+\end{center}
+
+\vspace{0.3em}
+\noindent\textit{La calidad del informe, la profundidad del análisis y la
+correcta interpretación de los resultados en lenguaje de negocios impactan
+de forma transversal en todas las partes.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Notas Importantes}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item Los atributos de sensibilidad de Gurobi (\texttt{.Pi},
+          \texttt{.Slack}, \texttt{.SAObjLow}, etc.) solo están disponibles
+          \textbf{luego de resolver} y solo si el estado es
+          \texttt{GRB.OPTIMAL}.
+    \item En el análisis paramétrico, \textbf{silenciee el output} de
+          Gurobi (\texttt{model.Params.OutputFlag = 0}) antes del loop
+          para evitar saturar la salida.
+    \item Al finalizar cada loop paramétrico, \textbf{restaure el valor
+          original} del parámetro variado para no arrastrar cambios entre
+          partes.
+    \item En el informe y en el código deben figurar los \textbf{nombres
+          de todos los integrantes del grupo}.
+    \item \textbf{Deben usar \texttt{gurobipy}} para la implementación.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\textit{Consultas al correo
+\href{mailto:vramireza@udd.cl}{\texttt{vramireza@udd.cl}} o al
+\texttt{+56\,9\,9912\,1814}
+(respondo siempre que puedo, dentro de horarios razonables).}
+\end{center}
+
+% =============================================================================
+\end{document}
+% =============================================================================
