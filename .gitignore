@@ -22,3 +22,13 @@ CLAUDE.md
 
 # Entregas de estudiantes (no publicar) — ej: 2026-T2/Tareas/Tarea X/Entregas
 **/Entregas/
+
+# temps
+*.temp
+*.out
+*.tmp
+*.aux
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk

@@ -1,0 +1,489 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+\usepackage{caption}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% ── Colores ──────────────────────────────────────────────────────────────────
+\definecolor{uddblue}{RGB}{0, 75, 135}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{codegray}{RGB}{100, 100, 100}
+\definecolor{codegreen}{RGB}{0, 120, 0}
+\definecolor{codeblue}{RGB}{0, 0, 180}
+\definecolor{codered}{RGB}{160, 0, 0}
+
+% ── Estilo de código Python ───────────────────────────────────────────────────
+\lstset{
+    language     = Python,
+    backgroundcolor = \color{lightgray},
+    basicstyle   = \small\ttfamily,
+    keywordstyle = \color{codeblue}\bfseries,
+    commentstyle = \color{codegreen}\itshape,
+    stringstyle  = \color{codered},
+    numberstyle  = \tiny\color{codegray},
+    numbers      = left,
+    stepnumber   = 1,
+    breaklines   = true,
+    frame        = single,
+    rulecolor    = \color{gray!40},
+    tabsize      = 4,
+    showstringspaces = false,
+    literate =
+        {á}{{\'{a}}}1 {é}{{\'{e}}}1 {í}{{\'{i}}}1
+        {ó}{{\'{o}}}1 {ú}{{\'{u}}}1 {ñ}{{\~{n}}}1
+        {Á}{{\'{A}}}1 {É}{{\'{E}}}1 {Í}{{\'{I}}}1
+        {Ó}{{\'{O}}}1 {Ú}{{\'{U}}}1 {Ñ}{{\~{N}}}1
+}
+
+% ── Cajas de ayuda ────────────────────────────────────────────────────────────
+\tcbuselibrary{skins, breakable}
+\newtcolorbox{ayuda}[1]{
+    colback   = lightgray,
+    colframe  = uddblue,
+    fonttitle = \bfseries\small,
+    title     = {#1},
+    breakable,
+    left      = 6pt,
+    right     = 6pt,
+    top       = 4pt,
+    bottom    = 4pt
+}
+
+% ── Encabezado y pie ─────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray} IIP314W\,--\,Optimización Aplicada a Negocios}
+\fancyhead[R]{\small\color{gray} Tarea 1\,--\,2026-T2}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{colorlinks=true, linkcolor=uddblue, urlcolor=uddblue}
+
+% ── Espaciado entre párrafos ──────────────────────────────────────────────────
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ── Título ───────────────────────────────────────────────────────────────────
+\begin{center}
+    {\Large\bfseries\color{uddblue}
+     (IIP314W) Optimización Aplicada a Negocios}\\[0.4em]
+    {\large Universidad del Desarrollo}\\[0.8em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.5em]
+    {\LARGE\bfseries Tarea 1}\\[0.3em]
+    {\large Métodos de Optimización Numérica:\\
+     Gradiente Descendente y Newton-Raphson}\\[0.5em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.8em]
+    \begin{tabular}{@{}ll@{}}
+        \textbf{Profesor:} & Ing.\ Rodrigo Trigo Vilches \\[0.3em]
+        \textbf{Ayudante:} & Lic.\ Vicente Ramírez Almonacid \\[0.3em]
+        \textbf{Período:}  & Año 2026\,--\,Trimestre 2
+    \end{tabular}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{0.5em}
+
+% =============================================================================
+\section*{Contexto}
+% =============================================================================
+
+En muchos problemas de negocio —minimización de costos, ajuste de modelos
+predictivos, calibración de parámetros— la función que se desea optimizar
+\textbf{no es convexa}: presenta múltiples mínimos locales. En estos casos, el
+algoritmo de optimización y, sobre todo, el \textbf{punto de partida} elegido
+determinan a qué solución se converge. Comprender este comportamiento es
+fundamental antes de aplicar métodos numéricos a problemas reales.
+
+En esta tarea estudiarán y compararán tres métodos clásicos de optimización
+numérica sobre una misma función de prueba multimodal:
+
+\begin{enumerate}[label=\arabic*., leftmargin=*, topsep=2pt]
+    \item Gradiente descendente con \textbf{paso fijo}.
+    \item Gradiente descendente con \textbf{dirección normalizada}.
+    \item Método de \textbf{Newton-Raphson}.
+\end{enumerate}
+
+Considere la siguiente función de dos variables, compuesta por la suma de
+tres gaussianas: dos \emph{invertidas} (negativas) y una \emph{positiva}, cada
+una centrada en un punto distinto del plano. Esto genera \textbf{dos mínimos
+locales y un máximo local} bien diferenciados:
+
+\begin{equation*}
+    f(x, y) = -\,e^{-\left[(x+2)^2+(y+1)^2\right]}
+              \;-\; 1{,}3\,e^{-\left[(x-2)^2+(y+1)^2\right]}
+              \;+\; 1{,}5\,e^{-\left[x^2+(y-1{,}5)^2\right]}
+\end{equation*}
+
+Esta estructura es un excelente caso de estudio: un método que solo sabe
+``bajar'' (gradiente descendente) se comportará de forma muy distinta a uno
+que busca anular el gradiente (Newton-Raphson), el cual no distingue entre
+mínimos, máximos y puntos silla. Le anticipamos, además, que entre ambos
+mínimos aparece de forma natural un \textbf{punto silla}: identificarlo y
+clasificarlo es parte del análisis.
+
+\begin{ayuda}{Trabajo en grupo}
+\vspace{2pt}
+La tarea se desarrolla \textbf{en parejas o grupos de 3} (ni más ni menos).
+Tanto el informe como el código deben incluir los nombres de todos los
+integrantes.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte A \quad Análisis Gráfico \hfill\normalfont\normalsize(10 pts)}
+% =============================================================================
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Visualice la función en una \textbf{gráfica 3D} para identificar la
+          estructura de sus mínimos y de su máximo.
+    \item Genere un \textbf{mapa de curvas de nivel} (contour) que permita
+          apreciar los valles, el cerro (máximo) y las regiones planas de la
+          función.
+    \item A partir de los gráficos, estime visualmente la ubicación aproximada
+          de los \textbf{dos mínimos} y del \textbf{máximo}. Estas estimaciones
+          le servirán para elegir puntos iniciales y para validar los
+          resultados numéricos.
+\end{enumerate}
+
+\begin{ayuda}{Pista -- Herramientas de visualización}
+\vspace{2pt}
+Para la superficie 3D necesitará una malla de puntos (\texttt{numpy.meshgrid})
+y un eje con proyección \texttt{"3d"} (método \texttt{plot\_surface}). Para las
+curvas de nivel, las funciones \texttt{contour} / \texttt{contourf} de
+\texttt{matplotlib} reciben esa misma malla. Si algún punto crítico queda fuera
+de la ventana, ajuste los rangos de $x$ e $y$ (sugerencia: explore en torno a
+$x\in[-5,5]$, $y\in[-4,5]$).
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte B \quad Gradiente Descendente con Paso Fijo \hfill\normalfont\normalsize(20 pts)}
+% =============================================================================
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Implemente el algoritmo de gradiente descendente con un
+          \textbf{tamaño de paso fijo} $\alpha$.
+    \item Pruebe con \textbf{al menos 4 puntos iniciales} distintos,
+          seleccionados estratégicamente en distintas regiones del dominio
+          (cercanos a cada valle, cerca del máximo y en zonas intermedias).
+    \item Para cada punto inicial, registre el \textbf{mínimo local encontrado},
+          el \textbf{valor de la función} en ese punto y el \textbf{número de
+          iteraciones} hasta la convergencia.
+    \item Visualice las \textbf{trayectorias de convergencia} sobre el mapa de
+          curvas de nivel.
+\end{enumerate}
+
+\begin{ayuda}{Pista -- Regla de actualización}
+\vspace{2pt}
+La iteración del gradiente descendente con paso fijo es:
+\[
+    \mathbf{x}_{k+1} = \mathbf{x}_k - \alpha \,\nabla f(\mathbf{x}_k),
+\]
+donde $\alpha > 0$ es el paso (tasa de aprendizaje) y $\nabla f$ es el
+gradiente. Un criterio de parada habitual es
+$\lVert \nabla f(\mathbf{x}_k) \rVert < \texttt{tol}$ o alcanzar un número
+máximo de iteraciones. Experimente con el valor de $\alpha$: un paso muy
+grande puede hacer divergir el método, y uno muy pequeño puede volverlo
+demasiado lento.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte C \quad Gradiente Descendente con Dirección Normalizada \hfill\normalfont\normalsize(20 pts)}
+% =============================================================================
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Implemente el algoritmo de gradiente descendente con
+          \textbf{dirección normalizada}: en cada paso se avanza una distancia
+          fija en la dirección del gradiente, independientemente de su
+          magnitud.
+    \item Use los \textbf{mismos puntos iniciales} que en la Parte~B.
+    \item Registre el mínimo local encontrado, el valor de la función y el
+          número de iteraciones en cada caso.
+    \item Visualice las trayectorias de convergencia sobre el mapa de curvas
+          de nivel.
+\end{enumerate}
+
+\begin{ayuda}{Pista -- Dirección normalizada}
+\vspace{2pt}
+La regla de actualización usa el gradiente \emph{normalizado}:
+\[
+    \mathbf{x}_{k+1} = \mathbf{x}_k
+    - \alpha \,\frac{\nabla f(\mathbf{x}_k)}{\lVert \nabla f(\mathbf{x}_k)\rVert}.
+\]
+Así, el tamaño del paso es siempre $\alpha$ (en distancia), sin importar si el
+gradiente es grande o pequeño. Reflexione sobre cómo afecta esto a la
+convergencia cerca del mínimo, donde el gradiente tiende a cero.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte D \quad Método de Newton-Raphson \hfill\normalfont\normalsize(25 pts)}
+% =============================================================================
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Investigue el método de Newton-Raphson para encontrar
+          \textbf{raíces de un sistema de ecuaciones} y aplíquelo para hallar
+          los \textbf{puntos críticos} de $f$ (es decir, los puntos donde
+          $\nabla f = \mathbf{0}$).
+    \item Para ello necesitará el \textbf{gradiente} $\nabla f$ y la
+          \textbf{matriz Hessiana} $H_f$. Puede obtenerlos de forma analítica
+          (a mano o con software simbólico) o numérica; en cualquier caso,
+          debe quedar documentado en el informe.
+    \item Al igual que en los métodos anteriores, use los \textbf{mismos
+          puntos iniciales}. Registre el punto crítico encontrado, el valor de
+          la función y el número de iteraciones.
+    \item Visualice las trayectorias de convergencia sobre el mapa de curvas
+          de nivel. \textbf{Comente} si el método siempre converge a un mínimo
+          o si, dependiendo del punto inicial, puede converger a un máximo o a
+          un punto silla.
+\end{enumerate}
+
+\begin{ayuda}{Pista -- Este método deben investigarlo}
+\vspace{2pt}
+A diferencia de los métodos anteriores, \textbf{aquí no se entrega la regla de
+actualización}: forma parte del trabajo investigar el método de Newton-Raphson
+y deducir cómo aplicarlo a este problema. Algunas preguntas que los pueden
+guiar:
+\begin{itemize}[topsep=2pt]
+    \item ¿Qué condición matemática cumple \emph{cualquier} punto crítico
+          (mínimo, máximo o silla)?
+    \item Newton-Raphson resuelve sistemas de ecuaciones no lineales
+          $\mathbf{F}(\mathbf{x}) = \mathbf{0}$. ¿Qué deberían tomar como
+          $\mathbf{F}$ para hallar los puntos críticos de $f$?
+    \item Una vez planteado así, ¿qué objeto matemático cumple el rol que la
+          derivada $f'$ cumple en el Newton-Raphson escalar de una variable?
+\end{itemize}
+Citen la(s) fuente(s) que consulten en el informe.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+\newpage
+% =============================================================================
+\section*{Parte E \quad Análisis Comparativo \hfill\normalfont\normalsize(25 pts)}
+% =============================================================================
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item En un \textbf{gráfico comparativo} (lado a lado o en vertical),
+          muestre las trayectorias de los tres métodos partiendo desde los
+          mismos puntos iniciales sobre el mapa de curvas de nivel.
+    \item Construya una \textbf{tabla resumen} con los resultados de cada
+          método para cada punto inicial. Puede usar el siguiente formato
+          (agregue columnas si lo estima conveniente):
+
+          \begin{center}
+          \renewcommand{\arraystretch}{1.2}
+          \begin{tabular}{lccccc}
+          \toprule
+          \textbf{Método} &
+          \textbf{Punto inicial} &
+          \textbf{Punto encontrado} &
+          \textbf{Punto crítico real} &
+          \textbf{Gap} &
+          \textbf{Iteraciones} \\
+          \midrule
+          GD paso fijo & $(x_0,y_0)$ & $(x_a,y_a)$ & $(x_b,y_b)$ & $m\%$ & $n$ \\
+          \multicolumn{6}{c}{\dots} \\
+          \bottomrule
+          \end{tabular}
+          \captionof{table}{Formato sugerido para la tabla comparativa.
+          Fuente: elaboración propia.}
+          \end{center}
+
+    \item Analice las diferencias entre los tres métodos en términos de:
+          \begin{itemize}[topsep=2pt]
+              \item \textbf{Número de iteraciones} hasta la convergencia.
+              \item \textbf{Sensibilidad al tamaño del paso} $\alpha$.
+              \item \textbf{Robustez} ante distintos puntos iniciales.
+              \item \textbf{Gap} entre los puntos críticos \emph{reales} y los
+                    efectivamente encontrados.
+              \item \textbf{Tipo de punto crítico} alcanzado por cada método:
+                    ¿a qué punto(s) puede converger Newton que GD nunca
+                    alcanza? Interprete la diferencia.
+          \end{itemize}
+\end{enumerate}
+
+\begin{ayuda}{Pista -- Puntos críticos ``reales'' de referencia}
+\vspace{2pt}
+Para calcular el \textbf{Gap} necesita los puntos críticos reales (los valores
+exactos hacia los que \emph{debería} converger cada método). Puede obtenerlos
+resolviendo $\nabla f = \mathbf{0}$ a mano, con software simbólico, o con una
+herramienta numérica de su elección; justifique en el informe cómo lo hizo.
+El \textbf{Gap} puede expresarse, por ejemplo, como la distancia entre el punto
+encontrado y el punto crítico real, o como la diferencia relativa en el valor
+de la función. Defina y justifique la métrica que utilice.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Entregables}
+% =============================================================================
+
+\subsection*{1.\quad Informe (PDF)}
+
+El informe es la pieza central de la evaluación. Debe contener, como
+\textbf{mínimo}, las siguientes secciones (cada una comenzando en una nueva
+página):
+
+\begin{enumerate}[leftmargin=*, topsep=2pt]
+    \item \textbf{Portada:} nombre del curso, Tarea~1, integrantes del grupo,
+          profesor, ayudante y fecha.
+    \item \textbf{Introducción al problema:} descripción del problema de
+          optimización abordado y de la función de estudio. ¿Por qué es
+          relevante analizar el comportamiento de los métodos ante una función
+          multimodal?
+    \item \textbf{Marco teórico:} definición de los conceptos clave utilizados
+          —gradiente, Hessiano, tasa de aprendizaje (paso), dirección de
+          descenso, criterio de tolerancia, punto crítico, convergencia, etc.
+    \item \textbf{Objetivos:} un \textbf{objetivo general} y al menos
+          \textbf{tres objetivos específicos} que guíen el desarrollo.
+    \item \textbf{Desarrollo (metodología):} explicación de \emph{cómo} se
+          realizó la tarea de inicio a fin —cómo se obtuvieron el gradiente y
+          el Hessiano, cómo se implementó cada método, qué puntos iniciales y
+          qué parámetros ($\alpha$, tolerancia, máximo de iteraciones) se
+          eligieron y por qué.
+    \item \textbf{Resultados:} presente \textbf{solo los resultados
+          importantes} —tabla comparativa, gráficos de trayectorias, gráfico
+          comparativo de los tres métodos.
+          \begin{quote}
+          \textit{Ojo:} en esta sección van los resultados puros, sin
+          interpretación.
+          \end{quote}
+    \item \textbf{Análisis de resultados:} interpretación de los resultados
+          anteriores. Discuta las diferencias de iteraciones, la sensibilidad
+          al paso, la robustez ante el punto inicial y los Gap observados.
+    \item \textbf{Conclusiones:} cierre respecto a la importancia de los
+          parámetros y del punto inicial, y si se cumplieron los objetivos
+          planteados. Sea \textbf{específico}: evite conclusiones genéricas del
+          tipo ``los parámetros son muy importantes'' o ``los métodos
+          funcionan''.
+    \item \textbf{Referencias} (si aplica).
+\end{enumerate}
+
+\begin{ayuda}{Formalidades del informe (se descuentan puntos por incumplimiento)}
+\begin{itemize}[topsep=2pt]
+    \item Lenguaje técnico y formal, sin errores ortográficos ni gramaticales.
+    \item Texto \textbf{justificado}, fuente tamaño \textbf{12}
+          (Times New Roman, Arial u otra tipografía estándar).
+    \item Cada figura, gráfico o tabla debe llevar \textbf{título y fuente}.
+          Si el material es de elaboración propia, debe indicarse
+          explícitamente: \emph{Fuente: elaboración propia}. Si proviene de una
+          fuente externa, debe citarse.
+    \item Sean \textbf{breves y directos}. Se prefiere un análisis corto,
+          directo y correcto, por sobre páginas de relleno.
+\end{itemize}
+\end{ayuda}
+
+\subsection*{2.\quad Cuaderno Jupyter (.ipynb)}
+
+\begin{itemize}[topsep=2pt]
+    \item Implementación \textbf{comentada} de los tres métodos
+          (Partes~B, C y D).
+    \item Los gráficos solicitados (superficie 3D, curvas de nivel,
+          trayectorias y gráfico comparativo).
+    \item La tabla resumen con los resultados para cada punto inicial.
+    \item Código limpio, ordenado y bien estructurado.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Formato de entrega:} comprima el informe y el notebook en un
+archivo \texttt{.zip} o \texttt{.rar} con el nombre \texttt{Tarea1\_GrupoN}.
+\textbf{No entregue los archivos por separado.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Plazos y Evaluación}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Plazo de entrega:} \emph{por confirmar} (se anunciará en
+          Canvas).
+    \item \textbf{Grupos:} 2 a 3 integrantes (ni más ni menos).
+    \item \textbf{Inscripción:} anótense en los grupos de Canvas
+          (Personas~$\to$ Grupos~$\to$ Tarea~1\,--\,Grupo~n).
+\end{itemize}
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lc}
+\toprule
+\textbf{Criterio} & \textbf{Ponderación} \\
+\midrule
+Parte A: Análisis gráfico                              & 10\,\% \\
+Parte B: Gradiente descendente con paso fijo           & 20\,\% \\
+Parte C: Gradiente descendente con dirección normalizada & 20\,\% \\
+Parte D: Método de Newton-Raphson                      & 25\,\% \\
+Parte E: Análisis comparativo                          & 25\,\% \\
+\midrule
+\textit{Calidad del informe y profundidad del análisis} &
+\textit{transversal} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Criterios de evaluación. Fuente: elaboración propia.}
+\end{center}
+
+\vspace{0.3em}
+\noindent\textit{La calidad del informe, la profundidad del análisis y la
+correcta interpretación de los resultados impactan de forma transversal en
+todas las partes.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Notas Importantes}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item Pueden usar software para derivar y para encontrar los puntos
+          críticos reales, o hacerlo a mano. En cualquier caso, el
+          procedimiento debe quedar plasmado en el informe.
+    \item Usen los \textbf{mismos puntos iniciales} en las Partes~B, C y D para
+          que la comparación de la Parte~E sea válida.
+    \item El gradiente descendente es sensible al paso $\alpha$: si el método
+          diverge, reduzca $\alpha$; si es muy lento, auméntelo con cuidado.
+    \item Newton-Raphson requiere que el Hessiano sea invertible en cada
+          iteración. Si encuentra problemas numéricos, repórtelos en el
+          informe.
+    \item En el informe y en el código deben figurar los \textbf{nombres de
+          todos los integrantes} del grupo.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\textit{Consultas al correo
+\href{mailto:vramireza@udd.cl}{\texttt{vramireza@udd.cl}} o al
+\texttt{+56\,9\,9912\,1814}
+(respondo siempre que puedo, dentro de horarios razonables).}
+\end{center}
+
+% =============================================================================
+\end{document}
+% =============================================================================
