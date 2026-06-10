@@ -148,6 +148,18 @@ Tanto el informe como el código deben incluir los nombres de todos los
 integrantes.
 \end{ayuda}
 
+\begin{ayuda}{Herramientas externas permitidas}
+\vspace{2pt}
+Pueden apoyarse en \textbf{herramientas externas} tanto para \textbf{obtener las
+derivadas} (el gradiente $\nabla f$ y la matriz Hessiana $H_f$) como para
+\textbf{encontrar los puntos críticos reales} de $f$: software simbólico
+(p.\,ej.\ \texttt{SymPy}, WolframAlpha, GeoGebra, Symbolab) o calculadoras
+numéricas / de derivadas en línea. Lo único exigido es \textbf{dejar constancia
+en el informe} de qué herramienta utilizaron y cómo obtuvieron el resultado.
+Lo que se evalúa es la implementación de los métodos y el análisis, no la
+derivación a mano.
+\end{ayuda}
+
 \noindent\rule{\linewidth}{0.4pt}
 
 % =============================================================================
@@ -296,15 +308,22 @@ Citen la(s) fuente(s) que consulten en el informe.
           (agregue columnas si lo estima conveniente):
 
           \begin{center}
-          \renewcommand{\arraystretch}{1.2}
-          \begin{tabular}{lccccc}
+          \small
+          \renewcommand{\arraystretch}{1.3}
+          \begin{tabular}{@{}
+              >{\raggedright\arraybackslash}p{2.2cm}
+              >{\centering\arraybackslash}p{1.7cm}
+              >{\centering\arraybackslash}p{2.0cm}
+              >{\centering\arraybackslash}p{2.0cm}
+              >{\centering\arraybackslash}p{1.0cm}
+              >{\centering\arraybackslash}p{1.6cm}@{}}
           \toprule
           \textbf{Método} &
           \textbf{Punto inicial} &
           \textbf{Punto encontrado} &
           \textbf{Punto crítico real} &
           \textbf{Gap} &
-          \textbf{Iteraciones} \\
+          \textbf{Iter.} \\
           \midrule
           GD paso fijo & $(x_0,y_0)$ & $(x_a,y_a)$ & $(x_b,y_b)$ & $m\%$ & $n$ \\
           \multicolumn{6}{c}{\dots} \\
@@ -360,8 +379,8 @@ página):
     \item \textbf{Marco teórico:} definición de los conceptos clave utilizados
           —gradiente, Hessiano, tasa de aprendizaje (paso), dirección de
           descenso, criterio de tolerancia, punto crítico, convergencia, etc.
-    \item \textbf{Objetivos:} un \textbf{objetivo general} y al menos
-          \textbf{tres objetivos específicos} que guíen el desarrollo.
+    \item \textbf{Objetivos:} un \textbf{objetivo general} y 
+          \textbf{algunos objetivos específicos} que guíen el desarrollo.
     \item \textbf{Desarrollo (metodología):} explicación de \emph{cómo} se
           realizó la tarea de inicio a fin —cómo se obtuvieron el gradiente y
           el Hessiano, cómo se implementó cada método, qué puntos iniciales y
@@ -422,7 +441,7 @@ archivo \texttt{.zip} o \texttt{.rar} con el nombre \texttt{Tarea1\_GrupoN}.
 % =============================================================================
 
 \begin{itemize}[topsep=2pt]
-    \item \textbf{Plazo de entrega:} \emph{por confirmar} (se anunciará en
+    \item \textbf{Plazo de entrega:} \emph{Viernes 19 de Junio} (se anunciará en
           Canvas).
     \item \textbf{Grupos:} 2 a 3 integrantes (ni más ni menos).
     \item \textbf{Inscripción:} anótense en los grupos de Canvas
