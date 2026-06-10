@@ -14,3 +14,11 @@ CLAUDE.md
 **/Talleres/**/[Pp]auta*
 **/Tareas/**/[Pp]auta*
 
+# Imágenes
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
+# Entregas de estudiantes (no publicar) — ej: 2026-T2/Tareas/Tarea X/Entregas
+**/Entregas/
