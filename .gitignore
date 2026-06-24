@@ -7,6 +7,7 @@ CLAUDE.md
 
 # Datos o archivos Pesados.
 *.xlsx
+*.csv
 
 # Pautas de talleres y tareas (NO las de ayudantías)
 # Cubre cualquier archivo/carpeta con "pauta"/"Pauta" dentro de Talleres/ o Tareas/,
