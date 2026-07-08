@@ -1,0 +1,444 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noquoting]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{newtxtext,newtxmath}
+\usepackage{booktabs,array,enumitem}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\newif\ifsolucion
+\ifdefined\ENUNCIADO\solucionfalse\else\soluciontrue\fi
+\setlength{\parskip}{0.4em}
+\begin{document}
+
+%============================ ENCABEZADO ============================
+\begin{center}
+{\normalsize\textbf{(IIP314W-2) [2026-T2] OPTIMIZACIÓN APLICADA A NEGOCIOS}}\\[0.4em]
+\rule{\linewidth}{0.8pt}\\[0.6em]
+{\Large\bfseries Ayudantía 5: Modelamiento con variables binarias%
+\ifsolucion\ --- Pauta (Solución)\fi}\\[0.8em]
+\rule{\linewidth}{0.4pt}\\[0.5em]
+{\normalsize
+Profesor: Rodrigo Trigo Vilches \quad$\cdot$\quad Ayudante: Vicente Ramírez\\[0.2em]
+Fecha: 8 de julio de 2026 \quad$\cdot$\quad Universidad del Desarrollo}
+\end{center}
+
+\vspace{0.6em}
+
+%============================ OBJETIVOS ============================
+\section*{Objetivos de la ayudantía}
+
+Esta ayudantía es de \textbf{modelamiento puro}: no escribiremos código (a diferencia de la Ayudantía 4, que resolvía en Python/Gurobi). El foco está en \emph{traducir} enunciados de negocio a modelos matemáticos con variables binarias, de forma \textbf{algebraica y paramétrica} (sin números concretos). Al terminar, deberías ser capaz de:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=0.2em]
+    \item Traducir problemas de negocio a modelos de optimización con \textbf{variables binarias}.
+    \item Modelar decisiones de \textbf{sí/no} (abrir una instalación, cargar un módulo, encender una máquina) con una binaria por decisión.
+    \item Usar \textbf{restricciones de activación} que ligan una variable binaria con una variable continua (``solo puede fluir/producir si está encendida'').
+    \item Aplicar la técnica de \textbf{big-M} y entender por qué conviene elegir la cota más ajustada posible.
+    \item Modelar \textbf{costos fijos} (fixed-charge), \textbf{incompatibilidades} (exclusión mutua), \textbf{prerrequisitos} (implicaciones if-then) y \textbf{coberturas} (mínimos por categoría).
+    \item Formular todo de forma \textbf{algebraica y paramétrica}, definiendo conjuntos, parámetros, variables, objetivo y restricciones.
+\end{itemize}
+
+%============================ REPASO ============================
+\section*{Repaso: modelamiento con variables binarias}
+
+\noindent\textbf{1. La variable binaria.} Una variable $y\in\{0,1\}$ representa una decisión \emph{sí/no} indivisible: $y=1$ si se toma la acción (abrir, cargar, encender, seleccionar) y $y=0$ si no. Toda la potencia del modelamiento entero está en \emph{ligar} estas binarias entre sí y con las variables continuas mediante restricciones lineales.
+
+\smallskip
+\noindent\textbf{2. Costo fijo (fixed-charge).} Muchas decisiones tienen un costo $f$ por el solo hecho de ``activarse'', independiente del nivel de uso $x$. La estructura canónica combina una binaria de activación $y$ con una variable continua $x$ ligadas por un big-M:
+\[
+\min \; \dots + f\,y + (\text{costo variable de } x)
+\qquad\text{s.a.}\qquad
+x \le M\,y,\quad x\ge 0,\quad y\in\{0,1\}.
+\]
+Si $y=0$, la restricción $x\le M\cdot 0=0$ obliga a $x=0$ (no se usa la opción y no se paga $f$); si $y=1$, se libera $x\le M$ y se paga el costo fijo $f$. Así el modelo ``cobra'' $f$ solo cuando efectivamente se activa la opción.
+
+\smallskip
+\noindent\textbf{3. Restricción de activación / big-M.} En general, la frase ``$x$ solo puede ser positiva si $y=1$'' se escribe $x \le M\,y$, con $M$ una cota superior válida de $x$. Cuando además se exige un \emph{mínimo} si la opción está activa (por ejemplo un mínimo técnico), se usa una \textbf{activación doble}:
+\[
+\ell\,y \;\le\; x \;\le\; u\,y,
+\]
+que fuerza $x=0$ cuando $y=0$ y $\ell \le x \le u$ cuando $y=1$.
+
+\smallskip
+\noindent\textbf{4. Lógica proposicional con binarias.} Las relaciones lógicas entre decisiones se vuelven desigualdades lineales:
+\[
+\underbrace{y_i \le y_j}_{\text{si }i\text{ entonces }j}
+\qquad
+\underbrace{y_i + y_j \le 1}_{\text{incompatibles (a lo más uno)}}
+\qquad
+\underbrace{\textstyle\sum_i y_i \ge 1}_{\text{al menos uno}}
+\qquad
+\underbrace{\textstyle\sum_i y_i \le k}_{\text{a lo más }k}.
+\]
+La implicación $y_i\le y_j$ dice ``si se elige $i$ ($y_i=1$) entonces obligatoriamente $y_j=1$''; es de un solo sentido. La exclusión $y_i+y_j\le1$ prohíbe el caso $(1,1)$.
+
+\smallskip
+\noindent\textbf{5. Cómo elegir $M$.} El big-M debe ser \emph{lo más pequeño posible pero válido} (una cota superior legítima de la variable que acota). Un $M$ innecesariamente gigante no cambia el óptimo entero, pero \textbf{debilita la relajación lineal} y hace mucho más lento el \emph{branch and bound}. Siempre conviene usar la cota natural del problema (una capacidad, una demanda acumulada, etc.).
+
+%============================ EJERCICIO 1 ============================
+\newpage
+
+\section{Ejercicio 1 — El puente aéreo humanitario}
+
+Una organización no gubernamental (ONG) de ayuda de emergencia coordina un \textbf{puente aéreo humanitario} hacia una región afectada por un desastre natural. La ventana de operación es breve: solo se dispone de \textbf{un vuelo} de un avión de carga, y la logística en tierra impide reprogramar despachos. Por eso, la decisión de \emph{qué cargar} en ese único vuelo es crítica y debe tomarse de una sola vez.
+
+La ayuda está preparada en \textbf{módulos} estandarizados listos para despachar. Cada módulo $i$ del conjunto $\mathcal{I}$ es una unidad indivisible —un pallet sellado— que se carga entero o no se carga: no tiene sentido enviar ``medio módulo''. A cada módulo el equipo humanitario le asignó, a partir de la evaluación de necesidades en terreno, un \textbf{impacto humanitario} $v_i$, un puntaje que resume cuántas personas beneficia y con qué urgencia. Además, cada módulo ocupa un \textbf{volumen} $a_i$ (en $\text{m}^3$) en la bodega, tiene una \textbf{masa} $m_i$ (en kg) y significó a la ONG un \textbf{costo de adquisición} $c_i$ para comprarlo y prepararlo.
+
+La ONG quiere elegir el subconjunto de módulos que \textbf{maximice el impacto humanitario total} del vuelo, respetando todas las limitaciones físicas, presupuestarias y operativas. Estas limitaciones surgen de forma natural del problema:
+
+\begin{itemize}[leftmargin=1.4em]
+    \item El avión tiene una \textbf{bodega} de capacidad finita: la suma de los volúmenes de lo cargado no puede exceder $V$ metros cúbicos.
+    \item El avión tiene un \textbf{payload máximo} (carga útil que puede levantar con seguridad): la masa total no puede superar $M$ kilogramos.
+    \item La operación se financia con un \textbf{presupuesto} acotado $B$: la ONG no puede gastar en adquisición más de lo que tiene.
+    \item El operativo debe ser \textbf{equilibrado}: los módulos se clasifican en categorías $g$ (agua, alimentos, medicina, refugio y energía), y por criterio humanitario se exige enviar \textbf{al menos} $n_g$ módulos de cada categoría, para no llegar con un avión lleno de agua pero sin medicinas.
+    \item Algunos módulos son \textbf{incompatibles} entre sí y no pueden viajar juntos (por ejemplo, un módulo de combustible inflamable junto a uno de material sensible): para ciertos pares $(i,j)\in\mathcal{P}$ se puede cargar a lo más uno de los dos.
+    \item Hay \textbf{prerrequisitos} técnicos: ciertos módulos de \emph{medicina refrigerada} solo sirven si viaja también el \textbf{generador} que mantiene la cadena de frío; si se carga el módulo $i$, entonces obligatoriamente debe cargarse el módulo $j$ asociado. Estas dependencias se listan en el conjunto $\mathcal{R}$ de pares $(i,j)$.
+    \item Por límites de \textbf{manejo y estiba en tierra} —cuadrillas y tiempo de carga acotados— no se pueden despachar más de $N$ módulos en total, aun si físicamente cupieran.
+\end{itemize}
+
+\bigskip
+\noindent\textbf{Conjuntos}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Símbolo & Descripción \\
+\midrule
+$\mathcal{I}$ & Conjunto de módulos de ayuda disponibles, indexados por $i$ \\
+$\mathcal{G}$ & Conjunto de categorías de ayuda (agua, alimentos, medicina, refugio, energía), indexadas por $g$ \\
+$\mathcal{I}_g \subseteq \mathcal{I}$ & Subconjunto de módulos que pertenecen a la categoría $g$ \\
+$\mathcal{P}$ & Conjunto de pares $(i,j)$ de módulos mutuamente incompatibles \\
+$\mathcal{R}$ & Conjunto de pares $(i,j)$ tales que cargar $i$ requiere cargar $j$ (prerrequisito) \\
+\bottomrule
+\end{tabular}
+
+\bigskip
+\noindent\textbf{Parámetros}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Símbolo & Descripción \\
+\midrule
+$v_i$ & Impacto humanitario del módulo $i$ \\
+$a_i$ & Volumen que ocupa el módulo $i$ $[\text{m}^3]$ \\
+$m_i$ & Masa del módulo $i$ $[\text{kg}]$ \\
+$c_i$ & Costo de adquisición del módulo $i$ $[\$]$ \\
+$V$ & Capacidad de volumen de la bodega del avión $[\text{m}^3]$ \\
+$M$ & Payload máximo (masa) que puede transportar el avión $[\text{kg}]$ \\
+$B$ & Presupuesto total de adquisición $[\$]$ \\
+$n_g$ & Número mínimo de módulos exigido de la categoría $g$ \\
+$N$ & Número máximo de módulos que pueden despacharse en el vuelo \\
+\bottomrule
+\end{tabular}
+
+\ifsolucion
+
+\subsection*{Variables de decisión}
+
+La decisión es, para cada módulo, \emph{cargarlo o no cargarlo}: un ``sí/no'' indivisible. Esto se modela con una variable \textbf{binaria} por módulo:
+\[
+y_i =
+\begin{cases}
+1 & \text{si el módulo } i \text{ se carga en el vuelo,}\\[2pt]
+0 & \text{en caso contrario,}
+\end{cases}
+\qquad \forall i \in \mathcal{I}.
+\]
+
+\subsection*{Función objetivo}
+
+Se busca maximizar el impacto humanitario total del cargamento, esto es, la suma de los impactos de los módulos efectivamente cargados:
+\[
+\max \; \sum_{i \in \mathcal{I}} v_i \, y_i .
+\]
+
+\subsection*{Restricciones}
+
+\begin{align}
+\sum_{i \in \mathcal{I}} a_i \, y_i &\le V
+    & &\text{(volumen)} \label{eq:vol}\\[4pt]
+\sum_{i \in \mathcal{I}} m_i \, y_i &\le M
+    & &\text{(masa)} \label{eq:masa}\\[4pt]
+\sum_{i \in \mathcal{I}} c_i \, y_i &\le B
+    & &\text{(presupuesto)} \label{eq:pres}\\[4pt]
+\sum_{i \in \mathcal{I}_g} y_i &\ge n_g
+    & &\text{(cobertura)} \quad \forall g \in \mathcal{G} \label{eq:cob}\\[4pt]
+y_i + y_j &\le 1
+    & &\text{(incompatibilidad)} \quad \forall (i,j) \in \mathcal{P} \label{eq:incomp}\\[4pt]
+y_i &\le y_j
+    & &\text{(prerrequisito)} \quad \forall (i,j) \in \mathcal{R} \label{eq:prereq}\\[4pt]
+\sum_{i \in \mathcal{I}} y_i &\le N
+    & &\text{(cardinalidad)} \label{eq:card}\\[4pt]
+y_i &\in \{0,1\}
+    & &\text{(naturaleza)} \quad \forall i \in \mathcal{I} \label{eq:bin}
+\end{align}
+
+\subsection*{Comentario de modelamiento}
+
+Este es un problema de \textbf{mochila (knapsack) multidimensional con lógica de selección}: la mochila es el avión, y ``multidimensional'' porque hay tres presupuestos simultáneos que respetar —volumen \eqref{eq:vol}, masa \eqref{eq:masa} y dinero \eqref{eq:pres}—, todos con la misma estructura $\sum(\text{recurso})\,y_i \le (\text{disponible})$. Lo interesante no es la capacidad, que ya vimos como restricción clásica, sino los tres \emph{trucos de modelamiento} con binarias que aparecen:
+
+\medskip
+\noindent\textbf{Incompatibilidad (mutuamente excluyentes).} Cuando dos módulos $i,j$ no pueden viajar juntos, imponemos $y_i + y_j \le 1$ en \eqref{eq:incomp}. La lectura es directa: la suma de dos variables $0$--$1$ solo alcanza el valor $2$ cuando ambas valen $1$; al acotarla por $1$ prohibimos exactamente ese caso, dejando libres las tres combinaciones admisibles $(0,0)$, $(1,0)$ y $(0,1)$. Es la forma canónica de decir ``a lo más uno de los dos''.
+
+\medskip
+\noindent\textbf{Prerrequisito o implicación if-then.} La frase ``si cargo la medicina refrigerada $i$, \emph{entonces} debo cargar el generador $j$'' es una implicación lógica $y_i = 1 \Rightarrow y_j = 1$. Se traduce en la desigualdad $y_i \le y_j$ de \eqref{eq:prereq}. Conviene verificar los cuatro casos: si $y_i=1$, la restricción fuerza $y_j \ge 1$, es decir $y_j=1$ (el generador viaja sí o sí); si $y_i=0$, entonces $y_j$ queda libre (puedo llevar el generador aunque no lleve esa medicina, o no llevar ninguno). Nótese que la implicación es \emph{en un solo sentido}: llevar el generador no obliga a llevar la medicina.
+
+\medskip
+\noindent\textbf{Cobertura por categoría.} La exigencia de equilibrio humanitario se modela con \eqref{eq:cob}, una restricción $\ge$ por cada categoría $g$, que suma las binarias \emph{solo sobre los módulos de esa categoría} (el subconjunto $\mathcal{I}_g$) y obliga a que haya al menos $n_g$ de ellos. Aquí el papel de los subconjuntos $\mathcal{I}_g$ es clave: nos permite escribir una familia compacta de restricciones —una por categoría— sin enumerar módulo por módulo. Finalmente, la cardinalidad \eqref{eq:card} es la ``otra cara'' de la cobertura: un techo global $\le N$ sobre \emph{todas} las binarias que limita cuántos módulos entran en total, capturando la restricción operativa de estiba que no es física (volumen o masa) sino de manejo en tierra.
+
+\fi
+
+%============================ EJERCICIO 2 ============================
+\newpage
+
+\section{Ejercicio 2 --- Rediseño de una red logística en el tiempo}
+
+Una empresa nacional de distribución de bienes de consumo enfrenta una decisión estratégica que rara vez se toma mirando un solo mes: quiere \textbf{rediseñar toda su red logística} a lo largo de un horizonte de planificación de varios periodos. La red tiene tres eslabones. En el primero están las \textbf{plantas} productoras $\mathcal{P}$, que son \emph{candidatas} --- algunas ya operan, otras podrían construirse ---; en el segundo, las \textbf{bodegas} $\mathcal{B}$, centros de acopio regionales que reciben la producción y la almacenan; y en el tercero, las \textbf{zonas de demanda} $\mathcal{J}$, los mercados que hay que abastecer. El producto fluye siempre en el mismo sentido: planta $\to$ bodega $\to$ zona.
+
+Lo que hace interesante (y difícil) al problema es que la empresa no decide una foto fija, sino una \emph{película}: en cada periodo $t\in\mathcal{T}$ puede tener ciertas plantas y bodegas \textbf{operativas} y otras cerradas, y puede \textbf{abrir} instalaciones que estaban cerradas o \textbf{cerrar} las que estaban abiertas, pagando cada vez el costo de la transición. El mercado tampoco es estático: cada zona $j$ exige una demanda $d_{jt}$ que cambia periodo a periodo (estacionalidad, crecimiento, campañas).
+
+Cada instalación operativa cuesta dinero solo por estar encendida: mantener una planta $p$ abierta durante el periodo $t$ cuesta $\mathit{FP}_{pt}$, y una bodega $b$ cuesta $\mathit{FB}_{bt}$. Encender por primera vez (o reabrir) una planta tiene un costo de apertura $\mathit{AP}_{p}$; apagarla cuesta $\mathit{CP}_{p}$ (desmovilizar personal, indemnizaciones, mantención en frío); las bodegas tienen sus equivalentes $\mathit{AB}_{b}$ y $\mathit{CB}_{b}$. Del lado operativo, cada planta operativa produce a lo más $\mathit{Cap}_{pt}$ unidades en el periodo $t$; cada bodega puede almacenar a lo más $\mathit{Alm}_{b}$ unidades; enviar una unidad de la planta $p$ a la bodega $b$ cuesta $\mathit{cp}_{pb}$ (producción más transporte del primer tramo) y de la bodega $b$ a la zona $j$ cuesta $\mathit{cg}_{bj}$. Finalmente, lo que una bodega no despacha en un periodo queda como \textbf{inventario}, que se arrastra al periodo siguiente pagando un costo de mantención $h_{b}$ por unidad almacenada al cierre del periodo.
+
+La gerencia quiere el plan de \emph{apertura, cierre, producción, transporte y almacenamiento} que satisface toda la demanda a lo largo del horizonte al \textbf{mínimo costo total}.
+
+\medskip
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Conjunto} & \textbf{Descripción} \\
+\midrule
+$\mathcal{P}$ & plantas candidatas (índice $p$) \\
+$\mathcal{B}$ & bodegas candidatas (índice $b$) \\
+$\mathcal{J}$ & zonas de demanda (índice $j$) \\
+$\mathcal{T}$ & periodos del horizonte, $t=1,\dots,|\mathcal{T}|$ (índice $t$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parámetro} & \textbf{Significado} \\
+\midrule
+$d_{jt}$ & demanda de la zona $j$ en el periodo $t$ $[\text{unid}]$ \\
+$\mathit{FP}_{pt}$ & costo fijo de operar la planta $p$ en el periodo $t$ $[\$]$ \\
+$\mathit{FB}_{bt}$ & costo fijo de operar la bodega $b$ en el periodo $t$ $[\$]$ \\
+$\mathit{AP}_{p},\ \mathit{CP}_{p}$ & costo de abrir / cerrar la planta $p$ $[\$]$ \\
+$\mathit{AB}_{b},\ \mathit{CB}_{b}$ & costo de abrir / cerrar la bodega $b$ $[\$]$ \\
+$\mathit{Cap}_{pt}$ & capacidad de producción de la planta $p$ en $t$ $[\text{unid}]$ \\
+$\mathit{Alm}_{b}$ & capacidad de almacenamiento de la bodega $b$ $[\text{unid}]$ \\
+$\mathit{cp}_{pb}$ & costo unitario producción $+$ transporte planta $p\to$ bodega $b$ $[\$/\text{unid}]$ \\
+$\mathit{cg}_{bj}$ & costo unitario de transporte bodega $b\to$ zona $j$ $[\$/\text{unid}]$ \\
+$h_{b}$ & costo de mantener una unidad de inventario en la bodega $b$ $[\$/\text{unid}]$ \\
+$y_{p0},\ z_{b0}$ & estado inicial (dado) de planta $p$ / bodega $b$ antes del horizonte \\
+$s_{b0}$ & inventario inicial de la bodega $b$ (dado) $[\text{unid}]$ \\
+$M^{P}_{pt},\ M^{B}_{bt}$ & cotas grandes (big-M) para ligar flujo con apertura \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\ifsolucion
+
+\subsection*{Variables de decisión}
+
+\noindent\textbf{Binarias de estado y de transición.}
+\begin{align*}
+y_{pt} &=
+\begin{cases}
+1 & \text{si la planta } p \text{ está \emph{operativa} en el periodo } t,\\
+0 & \text{en caso contrario},
+\end{cases}
+& \forall p\in\mathcal{P},\ t\in\mathcal{T},\\[2pt]
+z_{bt} &=
+\begin{cases}
+1 & \text{si la bodega } b \text{ está \emph{operativa} en el periodo } t,\\
+0 & \text{en caso contrario},
+\end{cases}
+& \forall b\in\mathcal{B},\ t\in\mathcal{T},\\[2pt]
+o^{P}_{pt} &= 1 \text{ si la planta } p \text{ se \emph{abre} al inicio de } t;\quad
+c^{P}_{pt} = 1 \text{ si se \emph{cierra}}, & \forall p\in\mathcal{P},\ t\in\mathcal{T},\\[2pt]
+o^{B}_{bt} &= 1 \text{ si la bodega } b \text{ se \emph{abre} al inicio de } t;\quad
+c^{B}_{bt} = 1 \text{ si se \emph{cierra}}, & \forall b\in\mathcal{B},\ t\in\mathcal{T}.
+\end{align*}
+
+\noindent\textbf{Continuas no negativas (flujos e inventario).}
+\begin{align*}
+f_{pbt} &\ge 0:\ \text{unidades enviadas de la planta } p \text{ a la bodega } b \text{ en } t, & \forall p,b,t,\\
+g_{bjt} &\ge 0:\ \text{unidades enviadas de la bodega } b \text{ a la zona } j \text{ en } t, & \forall b,j,t,\\
+s_{bt} &\ge 0:\ \text{inventario al final del periodo } t \text{ en la bodega } b, & \forall b,t.
+\end{align*}
+
+\subsection*{Función objetivo}
+
+Se minimiza el costo total del horizonte, compuesto por cinco bloques: (i) costos fijos de operación de plantas y bodegas; (ii) costos de apertura; (iii) costos de cierre; (iv) costos de producción y transporte en los dos tramos; y (v) costo de mantener inventario.
+
+\begin{align*}
+\min \quad
+&\sum_{t\in\mathcal{T}}\sum_{p\in\mathcal{P}} \mathit{FP}_{pt}\,y_{pt}
++ \sum_{t\in\mathcal{T}}\sum_{b\in\mathcal{B}} \mathit{FB}_{bt}\,z_{bt}
+&& \text{(operación)}\\
+&+ \sum_{t\in\mathcal{T}}\sum_{p\in\mathcal{P}}\!\big(\mathit{AP}_{p}\,o^{P}_{pt} + \mathit{CP}_{p}\,c^{P}_{pt}\big)
++ \sum_{t\in\mathcal{T}}\sum_{b\in\mathcal{B}}\!\big(\mathit{AB}_{b}\,o^{B}_{bt} + \mathit{CB}_{b}\,c^{B}_{bt}\big)
+&& \text{(transiciones)}\\
+&+ \sum_{t\in\mathcal{T}}\sum_{p\in\mathcal{P}}\sum_{b\in\mathcal{B}} \mathit{cp}_{pb}\,f_{pbt}
++ \sum_{t\in\mathcal{T}}\sum_{b\in\mathcal{B}}\sum_{j\in\mathcal{J}} \mathit{cg}_{bj}\,g_{bjt}
+&& \text{(prod.\ + transporte)}\\
+&+ \sum_{t\in\mathcal{T}}\sum_{b\in\mathcal{B}} h_{b}\,s_{bt}.
+&& \text{(inventario)}
+\end{align*}
+
+\subsection*{Restricciones}
+
+\begin{align}
+\sum_{b\in\mathcal{B}} f_{pbt} &\le \mathit{Cap}_{pt}\,y_{pt}
+&& \forall p\in\mathcal{P},\ t\in\mathcal{T}
+&& \text{(cap.\ planta)} \label{c:capplanta}\\[2pt]
+s_{bt} &\le \mathit{Alm}_{b}\,z_{bt}
+&& \forall b\in\mathcal{B},\ t\in\mathcal{T}
+&& \text{(cap.\ bodega)} \label{c:capbodega}\\[2pt]
+\sum_{p\in\mathcal{P}} f_{pbt} &\le M^{B}_{bt}\,z_{bt}
+&& \forall b\in\mathcal{B},\ t\in\mathcal{T}
+&& \text{(activa bodega)} \label{c:activabodega}\\[2pt]
+s_{bt} &= s_{b,t-1} + \sum_{p\in\mathcal{P}} f_{pbt} - \sum_{j\in\mathcal{J}} g_{bjt}
+&& \forall b\in\mathcal{B},\ t\in\mathcal{T}
+&& \text{(balance inv.)} \label{c:balance}\\[2pt]
+\sum_{b\in\mathcal{B}} g_{bjt} &\ge d_{jt}
+&& \forall j\in\mathcal{J},\ t\in\mathcal{T}
+&& \text{(demanda)} \label{c:demanda}\\[2pt]
+y_{pt} - y_{p,t-1} &= o^{P}_{pt} - c^{P}_{pt}
+&& \forall p\in\mathcal{P},\ t\in\mathcal{T}
+&& \text{(trans.\ planta)} \label{c:transp}\\[2pt]
+o^{P}_{pt} + c^{P}_{pt} &\le 1
+&& \forall p\in\mathcal{P},\ t\in\mathcal{T}
+&& \text{(exclus.\ planta)} \label{c:exclp}\\[2pt]
+z_{bt} - z_{b,t-1} &= o^{B}_{bt} - c^{B}_{bt}
+&& \forall b\in\mathcal{B},\ t\in\mathcal{T}
+&& \text{(trans.\ bodega)} \label{c:transb}\\[2pt]
+o^{B}_{bt} + c^{B}_{bt} &\le 1
+&& \forall b\in\mathcal{B},\ t\in\mathcal{T}
+&& \text{(exclus.\ bodega)} \label{c:exclb}\\[2pt]
+y_{pt},\, z_{bt},\, o^{P}_{pt},\, c^{P}_{pt},\, o^{B}_{bt},\, c^{B}_{bt} &\in \{0,1\}
+&& \forall p,b,t
+&& \text{(binarias)} \label{c:bin}\\[2pt]
+f_{pbt},\, g_{bjt},\, s_{bt} &\ge 0
+&& \forall p,b,j,t
+&& \text{(no neg.)} \label{c:noneg}
+\end{align}
+
+\noindent En las transiciones \eqref{c:transp} y \eqref{c:transb}, el término $y_{p,0}$ (resp.\ $z_{b,0}$) es el \emph{estado inicial dado} de la instalación; y en el balance \eqref{c:balance}, $s_{b,0}$ es el \emph{inventario inicial dado}. Ambos son parámetros, no variables.
+
+\subsection*{Comentario de modelamiento}
+
+Este modelo combina las tres ideas que hacen difícil (y realista) a la planificación de redes, y vale la pena aislar cada una.
+
+\textbf{El big-M que liga el flujo con la binaria de apertura.} Una planta no puede despachar nada si no está encendida. La restricción \eqref{c:capplanta} logra exactamente eso de manera elegante: cuando $y_{pt}=0$, el lado derecho vale $\mathit{Cap}_{pt}\cdot 0 = 0$, y como los flujos son no negativos, se fuerza $\sum_b f_{pbt}=0$; cuando $y_{pt}=1$, el lado derecho recupera la capacidad real $\mathit{Cap}_{pt}$ y la restricción cumple su segundo rol, el de \emph{cota de producción}. Es decir, la misma desigualdad hace dos trabajos: \emph{activar} (apagar el flujo si está cerrada) y \emph{limitar} (respetar la capacidad si está abierta), usando la propia capacidad como su big-M natural. En la bodega separamos ambos roles: \eqref{c:capbodega} liga el \emph{inventario} con la apertura (una bodega cerrada no guarda stock) y \eqref{c:activabodega} usa un big-M $M^{B}_{bt}$ para apagar el \emph{flujo entrante} si la bodega no opera. Un valor razonable de este big-M es $M^{B}_{bt}=\min\{\mathit{Alm}_b,\ \sum_j d_{jt'}\ \text{acumulada}\}$ o, más simple, la suma de capacidades de las plantas; conviene tomarlo lo más ajustado posible, porque un big-M innecesariamente grande relaja la formulación y hace más lento el \emph{branch and bound}.
+
+\textbf{La lógica de transición abrir/cerrar entre periodos.} La pareja \eqref{c:transp}--\eqref{c:exclp} es el corazón temporal del modelo. La ecuación $y_{pt}-y_{p,t-1}=o^{P}_{pt}-c^{P}_{pt}$ traduce el cambio de estado en eventos: si la planta pasa de apagada a encendida ($0\to1$) la diferencia es $+1$ y obliga a $o^{P}_{pt}=1$ (hubo apertura); si pasa de encendida a apagada ($1\to0$) la diferencia es $-1$ y obliga a $c^{P}_{pt}=1$ (hubo cierre); si no cambia, ambas quedan en cero. La desigualdad de exclusividad $o^{P}_{pt}+c^{P}_{pt}\le 1$ impide la solución absurda de ``abrir y cerrar simultáneamente'' para inflar costos o burlar el balance. Gracias a esta contabilidad, la función objetivo cobra $\mathit{AP}_p$ y $\mathit{CP}_p$ \emph{solo en el periodo exacto} en que ocurre la transición, capturando que reconfigurar la red no es gratis y desincentivando el ``prende y apaga'' oportunista.
+
+\textbf{El balance de inventario multiperiodo.} La restricción \eqref{c:balance} es lo que convierte un conjunto de problemas de transporte independientes en un \emph{plan} acoplado en el tiempo: el inventario al cierre de $t$ es el que había al cierre de $t-1$, más lo que entró desde las plantas, menos lo que salió hacia las zonas. Este arrastre permite que una bodega \emph{acumule} producción barata en periodos de baja demanda para volcarla cuando la demanda sube, siempre pagando $h_b$ por cada unidad guardada. Es la misma estructura de conservación de flujo que en un problema de lote económico, pero aquí anidada dentro de decisiones de apertura: solo una bodega abierta (por \eqref{c:capbodega}) puede sostener inventario, y solo una planta abierta (por \eqref{c:capplanta}) puede alimentarla.
+
+Finalmente, la restricción de \textbf{demanda} \eqref{c:demanda} es la exigencia de servicio del negocio (se puede escribir con $=$ si no se permite sobre-servir), y cierra la cadena obligando a que \emph{alguna} bodega abierta abastezca cada zona en cada periodo. El modelo así integra las decisiones estratégicas (qué construir y cuándo), tácticas (cuánto almacenar) y operativas (cómo transportar) en una sola optimización coherente.
+
+\fi
+
+%============================ EJERCICIO 3 ============================
+\newpage
+
+\section{Ejercicio 3 — Encendido y despacho de un parque de generadoras}
+
+Un \textbf{operador eléctrico} debe programar, al \textbf{mínimo costo}, el funcionamiento de su parque de centrales de generación a lo largo del día siguiente. El día se divide en un conjunto de \textbf{periodos} $\mathcal{T}$ (bloques horarios) y, en cada periodo $t$, el operador conoce con antelación la \textbf{demanda} de energía $d_t$ que el sistema deberá abastecer sin falla. Para satisfacerla dispone de un conjunto de \textbf{generadoras} $\mathcal{G}$ —centrales térmicas, de gas y de respaldo—, cada una con características técnicas y económicas propias.
+
+La particularidad de este problema, y lo que lo distingue de un despacho puramente continuo, es que \textbf{encender una central no es gratis ni instantáneo}. Toda generadora tiene un \textbf{mínimo técnico} $\mathit{Pmin}_g$: si está funcionando, por razones físicas (estabilidad de la turbina, temperatura de la caldera) no puede entregar menos que ese piso; y tiene una \textbf{potencia máxima} $\mathit{Pmax}_g$ que no puede superar. Además, mantener una central encendida cuesta $\mathit{cf}_g$ por periodo aunque casi no genere (el llamado costo de \emph{no-load}: personal, combustible de sostenimiento, servicios auxiliares), la energía efectivamente producida cuesta $\mathit{cv}_g$ por unidad, y cada vez que una central pasa de apagada a encendida se incurre en un costo de \textbf{arranque} $\mathit{ca}_g$ (calentar la caldera, sincronizar con la red), que puede ser muy elevado.
+
+El operador enfrenta, entonces, un dilema económico clásico: apagar una central cara en las horas de baja demanda ahorra su costo fijo y variable, pero obliga a pagar de nuevo el arranque cuando la demanda vuelva a subir. Decidir \emph{cuándo} encender y apagar cada unidad —y \emph{cuánto} generar en cada periodo— es el problema de \textbf{unit commitment} (compromiso de unidades). A esto se suman dos exigencias operativas de seguridad: por confiabilidad, la capacidad total \emph{encendida} en cada periodo debe superar la demanda en un margen de \textbf{reserva} $\mathit{rr}_t$ (para absorber fallas o peaks imprevistos), y cada central tiene una \textbf{rampa} $R_g$ que limita cuánto puede variar su potencia de un periodo al siguiente (una turbina no sube ni baja carga de golpe).
+
+Formule un modelo de optimización que le diga al operador, para cada generadora y cada periodo, si debe estar encendida, cuándo arranca y cuánta potencia entrega, minimizando el costo total del día.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Conjunto} & \textbf{Descripción} \\
+\midrule
+$\mathcal{G}$ & generadoras del parque (índice $g$) \\
+$\mathcal{T}$ & periodos del horizonte de planificación (índice $t$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parámetro} & \textbf{Significado} \\
+\midrule
+$d_t$ & demanda de energía a abastecer en el periodo $t$ $[\text{MW}]$ \\
+$\mathit{Pmin}_g$ & mínimo técnico de la generadora $g$ (potencia mínima si está encendida) $[\text{MW}]$ \\
+$\mathit{Pmax}_g$ & potencia máxima de la generadora $g$ $[\text{MW}]$ \\
+$\mathit{cv}_g$ & costo variable de $g$ por unidad de energía generada $[\$/\text{MW}]$ \\
+$\mathit{cf}_g$ & costo fijo de $g$ por periodo estando encendida (no-load) $[\$]$ \\
+$\mathit{ca}_g$ & costo de arranque de $g$ cada vez que se enciende $[\$]$ \\
+$\mathit{rr}_t$ & reserva operativa exigida en el periodo $t$ $[\text{MW}]$ \\
+$R_g$ & rampa: variación máxima de potencia de $g$ entre periodos consecutivos $[\text{MW}]$ \\
+$u^0_g$ & estado inicial de $g$ (1 si venía encendida del día anterior, 0 si no) \\
+$p^0_g$ & potencia inicial de $g$ al comienzo del horizonte $[\text{MW}]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\ifsolucion
+
+\subsection*{Variables de decisión}
+
+Para capturar simultáneamente el \emph{estado} de cada central, su \emph{transición} y su \emph{nivel de generación}, el modelo combina variables binarias con variables continuas:
+
+\begin{align*}
+u_{gt} &\in \{0,1\}: & &\text{$1$ si la generadora $g$ está \textbf{encendida} en el periodo $t$, $0$ si no;} \\
+v_{gt} &\in \{0,1\}: & &\text{$1$ si la generadora $g$ \textbf{arranca} (pasa de apagada a encendida) al inicio de $t$;} \\
+p_{gt} &\ge 0: & &\text{\textbf{potencia} entregada por la generadora $g$ durante el periodo $t$ $[\text{MW}]$.}
+\end{align*}
+
+\subsection*{Función objetivo}
+
+Se minimiza el costo total del horizonte, suma de tres componentes: el costo variable de la energía efectivamente generada, el costo fijo de mantener encendidas las unidades y el costo de los arranques.
+
+\begin{align*}
+\min \; \sum_{g\in\mathcal{G}}\sum_{t\in\mathcal{T}} \Big( \mathit{cv}_g\, p_{gt} \;+\; \mathit{cf}_g\, u_{gt} \;+\; \mathit{ca}_g\, v_{gt} \Big).
+\end{align*}
+
+\subsection*{Restricciones}
+
+\begin{align}
+\sum_{g\in\mathcal{G}} p_{gt} &\;=\; d_t
+    & &\forall\, t\in\mathcal{T}, & &\text{(balance)} \\[2pt]
+\mathit{Pmin}_g\, u_{gt} \;\le\; p_{gt} &\;\le\; \mathit{Pmax}_g\, u_{gt}
+    & &\forall\, g\in\mathcal{G},\ t\in\mathcal{T}, & &\text{(activación)} \\[2pt]
+v_{gt} &\;\ge\; u_{gt} - u_{g,t-1}
+    & &\forall\, g\in\mathcal{G},\ t\in\mathcal{T}, & &\text{(arranque)} \\[2pt]
+\sum_{g\in\mathcal{G}} \mathit{Pmax}_g\, u_{gt} &\;\ge\; d_t + \mathit{rr}_t
+    & &\forall\, t\in\mathcal{T}, & &\text{(reserva)} \\[2pt]
+-\,R_g \;\le\; p_{gt} - p_{g,t-1} &\;\le\; R_g
+    & &\forall\, g\in\mathcal{G},\ t\in\mathcal{T}, & &\text{(rampa)} \\[2pt]
+u_{gt} &\;\in\; \{0,1\}
+    & &\forall\, g\in\mathcal{G},\ t\in\mathcal{T}, & & \notag \\[-2pt]
+v_{gt} &\;\in\; \{0,1\},\quad p_{gt} \ge 0
+    & &\forall\, g\in\mathcal{G},\ t\in\mathcal{T}. & & \notag
+\end{align}
+
+\noindent Para el primer periodo, $u_{g,t-1}$ y $p_{g,t-1}$ se reemplazan por los datos iniciales $u^0_g$ y $p^0_g$ en las restricciones de arranque y de rampa.
+
+\subsection*{Comentario de modelamiento}
+
+El corazón de esta formulación es la manera en que las variables binarias \emph{gobiernan} a la variable continua de potencia. La restricción de \textbf{activación} es en realidad una desigualdad doble que actúa como un interruptor: cuando $u_{gt}=0$ (central apagada), la cadena $\mathit{Pmin}_g\cdot 0 \le p_{gt} \le \mathit{Pmax}_g\cdot 0$ colapsa a $0 \le p_{gt} \le 0$, forzando $p_{gt}=0$; y cuando $u_{gt}=1$ (encendida), se abre la ventana física real $\mathit{Pmin}_g \le p_{gt} \le \mathit{Pmax}_g$, obligando a la central a entregar al menos su mínimo técnico y a no superar su máximo. Aquí el rol de \textbf{big-M} lo cumple naturalmente $\mathit{Pmax}_g$: es la cota superior que multiplica al binario para ``liberar'' o ``anular'' la potencia. Esta es precisamente la técnica de \emph{restricción de activación} (o restricción indicadora) vista en clase, y la razón por la que el problema no puede resolverse solo con variables continuas: sin el binario $u_{gt}$ no habría forma de imponer el mínimo técnico \emph{condicional} (``si genera, que sea al menos $\mathit{Pmin}_g$; si no, cero'').
+
+La segunda pieza clave es el modelamiento del \textbf{arranque}, que liga periodos consecutivos. La lógica $v_{gt} \ge u_{gt} - u_{g,t-1}$ detecta la transición apagado$\to$encendido: si la central estaba apagada en $t-1$ ($u_{g,t-1}=0$) y se enciende en $t$ ($u_{gt}=1$), el lado derecho vale $1$ y obliga a $v_{gt}=1$, gatillando el pago del costo de arranque $\mathit{ca}_g$; en cualquier otro caso (seguía encendida, seguía apagada, o se apagó) el lado derecho es $\le 0$ y, como el objetivo minimiza y $v_{gt}$ tiene costo positivo, el solver la deja en $0$. No hace falta forzar la igualdad: la propia función objetivo empuja $v_{gt}$ a su mínimo. Gracias a esta restricción de acoplamiento temporal, el modelo internaliza el dilema económico central: apagar una unidad en un valle de demanda solo conviene si el ahorro en costo fijo y variable supera el costo de volver a arrancarla más tarde.
+
+Las tres restricciones restantes traducen exigencias de negocio y de ingeniería. El \textbf{balance} garantiza que la generación total iguale exactamente la demanda en cada periodo (podría relajarse a $\ge$ si se admite sobregeneración vertida). La \textbf{reserva} exige que la capacidad máxima \emph{de las unidades encendidas} —no la potencia usada— supere la demanda más un colchón $\mathit{rr}_t$, de modo que ante una falla imprevista el sistema tenga margen para subir carga sin encender nada nuevo; es una restricción de confiabilidad que se apoya de nuevo en el binario $u_{gt}$. Finalmente, la \textbf{rampa} acota la variación de potencia entre periodos consecutivos, reflejando que las turbinas tienen inercia térmica y mecánica y no pueden cambiar su nivel de generación bruscamente. Como sugerencia de enriquecimiento, se podría añadir una restricción de \emph{tiempo mínimo encendida/apagada} (una vez que una central arranca debe permanecer operando al menos $L_g$ periodos), lo que reforzaría aún más el acoplamiento temporal entre binarios.
+
+\fi
+
+\end{document}
