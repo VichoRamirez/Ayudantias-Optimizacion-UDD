@@ -321,6 +321,9 @@ z_{bt} - z_{b,t-1} &= o^{B}_{bt} - c^{B}_{bt}
 o^{B}_{bt} + c^{B}_{bt} &\le 1
 && \forall b\in\mathcal{B},\ t\in\mathcal{T}
 && \text{(exclus.\ bodega)} \label{c:exclb}\\[2pt]
+s_{b,t-1} &\le \mathit{Alm}_{b}\,(1 - c^{B}_{bt})
+&& \forall b\in\mathcal{B},\ t\in\mathcal{T}
+&& \text{(vaciar antes de cerrar)} \label{c:vaciar}\\[2pt]
 y_{pt},\, z_{bt},\, o^{P}_{pt},\, c^{P}_{pt},\, o^{B}_{bt},\, c^{B}_{bt} &\in \{0,1\}
 && \forall p,b,t
 && \text{(binarias)} \label{c:bin}\\[2pt]
@@ -329,7 +332,7 @@ f_{pbt},\, g_{bjt},\, s_{bt} &\ge 0
 && \text{(no neg.)} \label{c:noneg}
 \end{align}
 
-\noindent En las transiciones \eqref{c:transp} y \eqref{c:transb}, el término $y_{p,0}$ (resp.\ $z_{b,0}$) es el \emph{estado inicial dado} de la instalación; y en el balance \eqref{c:balance}, $s_{b,0}$ es el \emph{inventario inicial dado}. Ambos son parámetros, no variables.
+\noindent En las transiciones \eqref{c:transp} y \eqref{c:transb}, el término $y_{p,0}$ (resp.\ $z_{b,0}$) es el \emph{estado inicial dado} de la instalación; y en el balance \eqref{c:balance} y en \eqref{c:vaciar}, $s_{b,0}$ es el \emph{inventario inicial dado}. Todos son parámetros, no variables (así, cerrar una bodega en $t=1$ exige que su inventario inicial $s_{b,0}$ sea nulo).
 
 \subsection*{Comentario de modelamiento}
 
@@ -340,6 +343,8 @@ Este modelo combina las tres ideas que hacen difícil (y realista) a la planific
 \textbf{La lógica de transición abrir/cerrar entre periodos.} La pareja \eqref{c:transp}--\eqref{c:exclp} es el corazón temporal del modelo. La ecuación $y_{pt}-y_{p,t-1}=o^{P}_{pt}-c^{P}_{pt}$ traduce el cambio de estado en eventos: si la planta pasa de apagada a encendida ($0\to1$) la diferencia es $+1$ y obliga a $o^{P}_{pt}=1$ (hubo apertura); si pasa de encendida a apagada ($1\to0$) la diferencia es $-1$ y obliga a $c^{P}_{pt}=1$ (hubo cierre); si no cambia, ambas quedan en cero. La desigualdad de exclusividad $o^{P}_{pt}+c^{P}_{pt}\le 1$ impide la solución absurda de ``abrir y cerrar simultáneamente'' para inflar costos o burlar el balance. Gracias a esta contabilidad, la función objetivo cobra $\mathit{AP}_p$ y $\mathit{CP}_p$ \emph{solo en el periodo exacto} en que ocurre la transición, capturando que reconfigurar la red no es gratis y desincentivando el ``prende y apaga'' oportunista.
 
 \textbf{El balance de inventario multiperiodo.} La restricción \eqref{c:balance} es lo que convierte un conjunto de problemas de transporte independientes en un \emph{plan} acoplado en el tiempo: el inventario al cierre de $t$ es el que había al cierre de $t-1$, más lo que entró desde las plantas, menos lo que salió hacia las zonas. Este arrastre permite que una bodega \emph{acumule} producción barata en periodos de baja demanda para volcarla cuando la demanda sube, siempre pagando $h_b$ por cada unidad guardada. Es la misma estructura de conservación de flujo que en un problema de lote económico, pero aquí anidada dentro de decisiones de apertura: solo una bodega abierta (por \eqref{c:capbodega}) puede sostener inventario, y solo una planta abierta (por \eqref{c:capplanta}) puede alimentarla.
+
+\textbf{Vaciar antes de cerrar.} La restricción \eqref{c:vaciar} exige que una bodega solo pueda cerrarse si llegó \emph{vacía} al final del periodo anterior. Su lógica es un big-M limpio: si $c^{B}_{bt}=1$ (se cierra en $t$), el lado derecho $\mathit{Alm}_b(1-c^{B}_{bt})$ colapsa a $0$ y fuerza $s_{b,t-1}=0$; si no se cierra, $c^{B}_{bt}=0$ y la cota se relaja a $\mathit{Alm}_b$, quedando redundante con \eqref{c:capbodega}. El big-M natural es, otra vez, la propia capacidad de almacenamiento. Sin esta restricción, el modelo podría \emph{cerrar de golpe} una bodega con stock y liquidarlo en el mismo periodo de cierre —una ``bodega inactiva que aún despacha''—, artificio que aquí eliminamos: el plan óptimo debe programar el vaciado \emph{mientras la instalación sigue operativa} (en $t-1$) y solo entonces apagarla, que es como ocurre el cierre de un centro de distribución en la realidad.
 
 Finalmente, la restricción de \textbf{demanda} \eqref{c:demanda} es la exigencia de servicio del negocio (se puede escribir con $=$ si no se permite sobre-servir), y cierra la cadena obligando a que \emph{alguna} bodega abierta abastezca cada zona en cada periodo. El modelo así integra las decisiones estratégicas (qué construir y cuándo), tácticas (cuánto almacenar) y operativas (cómo transportar) en una sola optimización coherente.
 
