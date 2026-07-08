@@ -1,0 +1,487 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+\usepackage{caption}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% ── Colores ──────────────────────────────────────────────────────────────────
+\definecolor{uddblue}{RGB}{0, 75, 135}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{codegray}{RGB}{100, 100, 100}
+\definecolor{codegreen}{RGB}{0, 120, 0}
+\definecolor{codeblue}{RGB}{0, 0, 180}
+\definecolor{codered}{RGB}{160, 0, 0}
+
+% ── Estilo de código Python ───────────────────────────────────────────────────
+\lstset{
+    language     = Python,
+    backgroundcolor = \color{lightgray},
+    basicstyle   = \small\ttfamily,
+    keywordstyle = \color{codeblue}\bfseries,
+    commentstyle = \color{codegreen}\itshape,
+    stringstyle  = \color{codered},
+    numberstyle  = \tiny\color{codegray},
+    numbers      = left,
+    stepnumber   = 1,
+    breaklines   = true,
+    frame        = single,
+    rulecolor    = \color{gray!40},
+    tabsize      = 4,
+    showstringspaces = false,
+    literate =
+        {á}{{\'{a}}}1 {é}{{\'{e}}}1 {í}{{\'{i}}}1
+        {ó}{{\'{o}}}1 {ú}{{\'{u}}}1 {ñ}{{\~{n}}}1
+        {Á}{{\'{A}}}1 {É}{{\'{E}}}1 {Í}{{\'{I}}}1
+        {Ó}{{\'{O}}}1 {Ú}{{\'{U}}}1 {Ñ}{{\~{N}}}1
+}
+
+% ── Cajas de ayuda ────────────────────────────────────────────────────────────
+\tcbuselibrary{skins, breakable}
+\newtcolorbox{ayuda}[1]{
+    colback   = lightgray,
+    colframe  = uddblue,
+    fonttitle = \bfseries\small,
+    title     = {#1},
+    breakable,
+    left      = 6pt,
+    right     = 6pt,
+    top       = 4pt,
+    bottom    = 4pt
+}
+
+% ── Encabezado y pie ─────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray} IIP314W\,--\,Optimización Aplicada a Negocios}
+\fancyhead[R]{\small\color{gray} Tarea 2\,--\,2026-T2}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{colorlinks=true, linkcolor=uddblue, urlcolor=uddblue}
+
+% ── Espaciado entre párrafos ──────────────────────────────────────────────────
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ── Título ───────────────────────────────────────────────────────────────────
+\begin{center}
+    {\Large\bfseries\color{uddblue}
+     (IIP314W) Optimización Aplicada a Negocios}\\[0.4em]
+    {\large Universidad del Desarrollo}\\[0.8em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.5em]
+    {\LARGE\bfseries Tarea 2}\\[0.3em]
+    {\large Modelamiento y Optimización:\\
+     Localización de Servidores en la Nube (Netflix\,--\,AWS)}\\[0.5em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.8em]
+    \begin{tabular}{@{}ll@{}}
+        \textbf{Profesor:} & Ing.\ Rodrigo Trigo Vilches \\[0.3em]
+        \textbf{Ayudante:} & Lic.\ Vicente Ramírez Almonacid \\[0.3em]
+        \textbf{Período:}  & Año 2026\,--\,Trimestre 2
+    \end{tabular}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{0.5em}
+
+% =============================================================================
+\section*{Contexto: Servicios en la Nube para Netflix}
+% =============================================================================
+
+Usted prestará servicios informáticos a la compañía de \emph{streaming}
+\textbf{Netflix}. Para ello alojará servidores en los centros de datos de
+\textbf{AWS} (Amazon Web Services) y debe decidir \textbf{dónde y cuántos
+servidores dar de alta}, de modo de \textbf{minimizar el costo total} y, al
+mismo tiempo, cumplir con los requerimientos de negocio (atender a todos los
+clientes, respetar capacidades y garantizar una calidad de servicio mínima).
+
+Netflix presta servicios en $n$ países. En cada país $i$ existe una masa de
+$C_i$ clientes que deben ser atendidos. AWS cuenta con $z$ \textbf{zonas de
+servicio} (cada zona representa un país). Como es habitual, $z < n$: solo los
+primeros $z$ países poseen una zona AWS local, mientras que los $(n-z)$ países
+restantes \textbf{no tienen infraestructura propia} y deben ser atendidos desde
+otra zona. Para simplificar la notación, los países con zona AWS se ubican
+\textbf{al comienzo} de la lista y los países sin zona, al final.
+
+Dar de alta un servidor en la zona $j$ tiene un costo $S_j$ y puede atender
+hasta $U_j$ clientes a su máxima capacidad. En cada zona se puede instalar un
+máximo de $M_j$ servidores. Adicionalmente, \textbf{utilizar} una zona (es
+decir, operar al menos un servidor en ella) implica un \textbf{costo
+administrativo fijo} $A_j$ (licencias, personal de soporte, cumplimiento
+regulatorio): si una zona no se utiliza, este costo se ahorra por completo.
+
+Existe además una restricción de \textbf{latencia}: por calidad de servicio,
+los clientes de un país solo pueden ser atendidos desde zonas
+\textbf{geográficamente compatibles} (una región no puede servirse desde otra
+sin degradar la experiencia). Finalmente, los países que \emph{sí} poseen zona
+local están sujetos a un \textbf{acuerdo de nivel de servicio (SLA)}: al menos
+una fracción $\beta$ de sus clientes debe ser atendida localmente.
+
+\begin{ayuda}{Trabajo en grupo}
+\vspace{2pt}
+La tarea se desarrolla \textbf{en parejas o grupos de 3} (ni más ni menos).
+Tanto el informe como el código deben incluir los nombres de todos los
+integrantes. \textbf{Es obligatorio resolver el modelo con \texttt{gurobipy}}.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Datos del problema}
+% =============================================================================
+
+Para esta tarea, Netflix opera en $n = 8$ países, de los cuales $z = 3$ poseen
+zona AWS local. Todas las cantidades de clientes y capacidades están expresadas
+\textbf{en miles de clientes}; los costos, en \textbf{miles de USD mensuales}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{clcc}
+\toprule
+\textbf{$i$} & \textbf{País} & \textbf{¿Zona AWS local?} &
+\textbf{Clientes $C_i$ (miles)} \\
+\midrule
+1 & Brasil (São Paulo)          & Sí (Zona 1) & 900  \\
+2 & Estados Unidos (N.\ Virginia) & Sí (Zona 2) & 1200 \\
+3 & Alemania (Frankfurt)        & Sí (Zona 3) & 600  \\
+4 & Chile                       & No          & 150  \\
+5 & México                      & No          & 400  \\
+6 & Argentina                   & No          & 250  \\
+7 & Sudáfrica                   & No          & 180  \\
+8 & India (Mumbai)              & No          & 700  \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Países atendidos y masa de clientes por país.}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{clcccc}
+\toprule
+\textbf{$j$} & \textbf{Zona AWS} &
+\textbf{$S_j$ (alta/serv.)} &
+\textbf{$U_j$ (cap./serv.)} &
+\textbf{$M_j$ (máx.\ serv.)} &
+\textbf{$A_j$ (admin.)} \\
+\midrule
+1 & Brasil (São Paulo)     & 10 & 300 & 6 & 50 \\
+2 & EE.UU.\ (N.\ Virginia) &  8 & 350 & 8 & 40 \\
+3 & Alemania (Frankfurt)   & 12 & 300 & 6 & 60 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Parámetros de cada zona AWS. $S_j$ y $A_j$ en miles de USD;
+$U_j$ en miles de clientes.}
+\end{center}
+
+\textbf{Compatibilidad por latencia.} Cada país solo puede ser atendido desde
+las zonas de su misma región:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{País $\backslash$ Zona} &
+\textbf{Z1 Brasil} & \textbf{Z2 Virginia} & \textbf{Z3 Frankfurt} \\
+\midrule
+Brasil          & Sí & Sí & No \\
+Estados Unidos  & Sí & Sí & No \\
+Alemania        & No & No & Sí \\
+Chile           & Sí & Sí & No \\
+México          & Sí & Sí & No \\
+Argentina       & Sí & Sí & No \\
+Sudáfrica       & No & No & Sí \\
+India           & No & No & Sí \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Matriz de compatibilidad país--zona (región \emph{Américas}:
+Z1, Z2; región \emph{EMEA/Asia}: Z3).}
+\end{center}
+
+\textbf{SLA de servicio local:} $\beta = 0{,}5$. Es decir, cada país que posee
+zona local (Brasil, EE.UU., Alemania) debe atender al menos el \textbf{50\,\%}
+de sus clientes desde su propia zona.
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte A \quad Formulación del Modelo \hfill\normalfont\normalsize(35 pts)}
+% =============================================================================
+
+Formule un \textbf{modelo de optimización} que minimice el costo total. Su
+formulación debe ser completamente algebraica (en notación matemática,
+\textbf{no} en código). \textbf{Toda la información necesaria está en el
+Contexto y en los Datos del problema}; una parte esencial de esta tarea es que
+\textbf{ustedes identifiquen} por su cuenta los componentes del modelo. Su
+formulación debe contener:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Conjuntos e índices:} defina los conjuntos que necesite para
+          indexar países y zonas (y cualquier subconjunto que le resulte útil).
+    \item \textbf{Parámetros:} liste, con su notación, todos los datos del
+          problema.
+    \item \textbf{Variables de decisión:} identifique y defina \textbf{todas}
+          las variables necesarias. Para cada una indique con precisión su
+          \textbf{significado}, sus \textbf{unidades}, su \textbf{dominio} y su
+          \textbf{tipo} (continua, entera o binaria) según lo que represente.
+    \item \textbf{Función objetivo:} plantee la expresión del costo total a
+          minimizar a partir de los costos descritos en el Contexto.
+    \item \textbf{Restricciones:} formule y \textbf{nombre} \textbf{todas} las
+          restricciones necesarias para que el modelo represente fielmente los
+          requerimientos de negocio descritos en el Contexto y en los Datos.
+          Incluya los dominios de las variables.
+\end{enumerate}
+
+\noindent\textit{Sugerencia de método (no de solución): relea con cuidado el
+Contexto y la sección de Datos. Cada condición del negocio —cobertura de los
+clientes, capacidades, límites, costos que se pagan solo al utilizar un recurso,
+latencia y SLA— suele traducirse en una o más restricciones. Decidir cuántas
+variables usar, de qué tipo, y qué restricciones escribir es precisamente lo que
+se evalúa en esta parte.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte B \quad Implementación y Resolución en Gurobi \hfill\normalfont\normalsize(35 pts)}
+% =============================================================================
+
+Implemente el modelo de la Parte~A en \texttt{gurobipy} y resuélvalo con los
+datos entregados. Responda:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Reporte el \textbf{costo total óptimo} y descompóngalo en costo de
+          servidores y costo administrativo.
+    \item Reporte, para cada zona: si se \textbf{utiliza}, el \textbf{número de
+          servidores} instalados y el \textbf{porcentaje de utilización} de su
+          capacidad instalada.
+    \item Presente la \textbf{matriz de asignación} (clientes de cada país
+          atendidos desde cada zona) en una tabla clara.
+    \item Verifique e informe que se cumplen: (i) la cobertura de todos los
+          clientes, (ii) el SLA local de Brasil, EE.UU.\ y Alemania, y (iii) la
+          compatibilidad por latencia.
+    \item Interprete la solución en \textbf{lenguaje de negocios}: ¿qué zonas
+          conviene activar y por qué? ¿Alguna zona queda sin utilizar?
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Sintaxis de \texttt{gurobipy} (referencia del lenguaje)}
+\vspace{2pt}
+Esta caja es solo una referencia de la \emph{sintaxis} de la herramienta, con
+nombres genéricos: \textbf{no} es el modelo, y \textbf{no} indica qué variables
+o restricciones usar (eso es parte de lo evaluado). En \texttt{gurobipy} una
+variable puede declararse continua, entera o binaria, y las sumas sobre
+conjuntos se arman con \texttt{quicksum}:
+\begin{lstlisting}
+import gurobipy as gp
+from gurobipy import GRB, quicksum
+
+m = gp.Model("netflix_aws")
+
+# Ejemplos de sintaxis (nombres genericos, NO son el modelo):
+a = m.addVars(Conjunto, lb=0, name="a")             # continua >= 0
+b = m.addVars(Conjunto, vtype=GRB.INTEGER, lb=0)    # entera >= 0
+c = m.addVars(Conjunto, vtype=GRB.BINARY)           # binaria (0/1)
+
+m.setObjective(quicksum(...), GRB.MINIMIZE)
+m.addConstrs((... for k in Conjunto), name="mi_restr")  # nombrela!
+
+m.optimize()
+if m.Status == GRB.OPTIMAL:
+    print("Optimo:", m.ObjVal)
+    print(a[k].X)   # valor de una variable en la solucion
+\end{lstlisting}
+Construyan el modelo de forma \textbf{algebraica} (con \texttt{addVars} y
+\texttt{quicksum} sobre los conjuntos), no escribiendo los números uno a uno
+dentro de las restricciones.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+\newpage
+% =============================================================================
+\section*{Parte C \quad Escenarios y Preguntas Conceptuales \hfill\normalfont\normalsize(30 pts)}
+% =============================================================================
+
+% ── C.1 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.1 \quad ¿Cuánto pesa el costo administrativo? \hfill\normalfont\normalsize(15 pts)}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Resuelva nuevamente el modelo \textbf{eliminando el costo
+          administrativo} ($A_j = 0$ para toda zona). Compare la solución
+          (zonas activas, servidores, costo) con la del caso base.
+    \item ¿El costo administrativo cambia \textbf{qué zonas} se activan, o solo
+          el valor de la función objetivo? Explique el resultado.
+\end{enumerate}
+
+% ── C.2 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.2 \quad Preguntas conceptuales \hfill\normalfont\normalsize(15 pts)}
+
+Responda \textbf{razonadamente} (no requieren resolver un nuevo modelo):
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Zona vacía.} ¿Bajo qué condiciones una zona termina
+          \textbf{sin ningún servidor} en la solución óptima? Relacione su
+          respuesta con el costo administrativo $A_j$, la latencia y las
+          capacidades disponibles.
+    \item \textbf{Servidores ilimitados y sin costo administrativo.} Suponga
+          $M_j = \infty$ para toda zona y $A_j = 0$. \textbf{Sin resolver el
+          modelo}, ¿cuál sería la estructura de la solución óptima? Indique a
+          qué zona convendría asignar cada país y por qué. \emph{Pista: piense
+          en el costo por cliente atendido de cada zona, $S_j / U_j$.}
+\end{enumerate}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Entregables}
+% =============================================================================
+
+\subsection*{1.\quad Informe (PDF)}
+
+Estructura mínima requerida (cada sección comienza en una nueva página):
+
+\begin{enumerate}[leftmargin=*, topsep=2pt]
+    \item \textbf{Portada:} nombre del curso, Tarea~2, integrantes, profesor,
+          ayudante y fecha.
+    \item \textbf{Introducción:} descripción del problema de negocio y de su
+          relevancia.
+    \item \textbf{Marco teórico:} conceptos clave utilizados en la formulación
+          y resolución (tipos de variables, función objetivo, restricciones,
+          factibilidad, etc.).
+    \item \textbf{Desarrollo (metodología):} la formulación completa de la
+          Parte~A y la explicación de cómo se implementó y resolvió en
+          \texttt{gurobipy}.
+    \item \textbf{Resultados:} presente \textbf{solo los resultados
+          importantes} —solución óptima, tablas de activación y asignación,
+          y escenarios de la Parte~C.
+          \begin{quote}
+          \textit{Ojo:} en esta sección van los resultados puros, sin
+          interpretación.
+          \end{quote}
+    \item \textbf{Análisis de resultados:} interpretación de la solución y de
+          los escenarios en lenguaje de negocios.
+    \item \textbf{Conclusiones:} sea \textbf{específico}. Evite frases genéricas
+          del tipo ``el modelo funciona'' o ``las restricciones son
+          importantes''.
+    \item \textbf{Referencias} (si aplica).
+\end{enumerate}
+
+\begin{ayuda}{Formalidades del informe (se descuentan puntos por incumplimiento)}
+\begin{itemize}[topsep=2pt]
+    \item Lenguaje técnico y formal, sin errores ortográficos ni gramaticales.
+    \item Texto \textbf{justificado}, fuente tamaño \textbf{12}
+          (Times New Roman, Arial u otra tipografía estándar).
+    \item Cada figura, gráfico o tabla debe llevar \textbf{título y fuente}.
+          Si el material es de elaboración propia, debe indicarse
+          explícitamente: \emph{Fuente: elaboración propia}. Si proviene de una
+          fuente externa, debe citarse.
+    \item Sean \textbf{breves y directos}. Se prefiere un análisis corto,
+          directo y correcto, por sobre páginas de relleno.
+\end{itemize}
+\end{ayuda}
+
+\subsection*{2.\quad Cuaderno Jupyter (.ipynb)}
+
+\begin{itemize}[topsep=2pt]
+    \item Implementación \textbf{comentada} del modelo en \texttt{gurobipy}
+          (Parte~B), con variables enteras y binarias.
+    \item Extracción e impresión de la solución: activación, servidores,
+          utilización y matriz de asignación.
+    \item Código de los escenarios de la Parte~C (comparación con y sin costo
+          administrativo).
+    \item Código limpio, ordenado y bien estructurado.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Formato de entrega:} comprima el informe y el notebook en un
+archivo \texttt{.zip} o \texttt{.rar} con el nombre \texttt{Tarea2\_GrupoN}.
+\textbf{No entregue los archivos por separado.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Plazos y Evaluación}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Plazo de entrega:} Viernes 10 de julio a las 23:59
+          (se confirmará en Canvas).
+    \item \textbf{Grupos:} 2 a 3 integrantes (ni más ni menos).
+    \item \textbf{Inscripción:} anótense en los grupos de Canvas
+          (Personas~$\to$ Grupos~$\to$ Tarea~2\,--\,Grupo~n).
+\end{itemize}
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lc}
+\toprule
+\textbf{Criterio} & \textbf{Ponderación} \\
+\midrule
+Parte A: Formulación del modelo                      & 35\,\% \\
+Parte B: Implementación y resolución en Gurobi       & 35\,\% \\
+Parte C: Escenarios y preguntas conceptuales         & 30\,\% \\
+\midrule
+\textit{Calidad del informe y profundidad del análisis} &
+\textit{transversal} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Criterios de evaluación.}
+\end{center}
+
+\vspace{0.3em}
+\noindent\textit{La calidad del informe, la profundidad del análisis y la
+correcta interpretación de los resultados en lenguaje de negocios impactan
+de forma transversal en todas las partes.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Notas Importantes}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Deben usar \texttt{gurobipy}} para la implementación.
+    \item Cada variable debe declararse con su \textbf{dominio y tipo
+          correctos} (continua, entera o binaria, según lo que represente).
+          Identificar los tipos es parte de la evaluación.
+    \item \textbf{Nombren} las restricciones al crearlas: facilita la lectura
+          de la solución, la depuración y el análisis de infactibilidad.
+    \item Construyan el modelo de forma \textbf{algebraica} (con conjuntos,
+          \texttt{addVars} y \texttt{quicksum}); no escriban los números uno a
+          uno dentro de las restricciones.
+    \item Pueden apoyarse en herramientas externas para entender el método,
+          pero la \textbf{formulación} y el \textbf{análisis} deben ser propios
+          y quedar plasmados en el informe.
+    \item En el informe y en el código deben figurar los \textbf{nombres de
+          todos los integrantes} del grupo.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\textit{Consultas al correo
+\href{mailto:vramireza@udd.cl}{\texttt{vramireza@udd.cl}} o al
+\texttt{+56\,9\,9912\,1814}
+(respondo siempre que puedo, dentro de horarios razonables).}
+\end{center}
+
+% =============================================================================
+\end{document}
+% =============================================================================
