@@ -1,0 +1,445 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{tikz}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% ── Colores ──────────────────────────────────────────────────────────────────
+\definecolor{uddblue}{RGB}{0, 75, 135}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+
+% ── Cajas de ayuda ────────────────────────────────────────────────────────────
+\tcbuselibrary{skins, breakable}
+\newtcolorbox{ayuda}[1]{
+    colback   = lightgray,
+    colframe  = uddblue,
+    fonttitle = \bfseries\small,
+    title     = {#1},
+    breakable,
+    left      = 6pt,
+    right     = 6pt,
+    top       = 4pt,
+    bottom    = 4pt
+}
+
+% ── Diagrama de amenazas (tablero 5x5 con la pieza al centro) ────────────────
+% #1 = lista de casillas amenazadas, #2 = letra de la pieza
+\newcommand{\tablero}[2]{%
+\begin{tikzpicture}[scale=0.40]
+    \foreach \c/\r in {#1}{\fill[uddblue!25] (\c,\r) rectangle ++(1,1);}
+    \fill[uddblue!70] (2,2) rectangle ++(1,1);
+    \draw[step=1, gray!60] (0,0) grid (5,5);
+    \draw[gray!60] (0,0) rectangle (5,5);
+    \node[white, font=\bfseries\small] at (2.5,2.5) {#2};
+\end{tikzpicture}}
+
+% ── Encabezado y pie ─────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray} IIP314W\,--\,Optimización Aplicada a Negocios}
+\fancyhead[R]{\small\color{gray} Tarea 3\,--\,2026-T2}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{colorlinks=true, linkcolor=uddblue, urlcolor=uddblue}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ── Título ───────────────────────────────────────────────────────────────────
+\begin{center}
+    {\Large\bfseries\color{uddblue}
+     (IIP314W) Optimización Aplicada a Negocios}\\[0.4em]
+    {\large Universidad del Desarrollo}\\[0.8em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.5em]
+    {\LARGE\bfseries Tarea 3}\\[0.3em]
+    {\large Ajedrez y Optimización Entera:\\
+     Máxima Ocupación de un Tablero sin Amenazas}\\[0.5em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.8em]
+    \begin{tabular}{@{}ll@{}}
+        \textbf{Profesor:} & Ing.\ Rodrigo Trigo Vilches \\[0.3em]
+        \textbf{Ayudante:} & Lic.\ Vicente Ramírez Almonacid \\[0.3em]
+        \textbf{Período:}  & Año 2026\,--\,Trimestre 2
+    \end{tabular}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{0.5em}
+
+% =============================================================================
+\section*{Contexto}
+% =============================================================================
+
+En esta tarea deberán \textbf{modelar y resolver problemas de optimización lineal
+entera} para determinar la \textbf{máxima cantidad de piezas de ajedrez} que se
+pueden ubicar en un tablero estándar de $8\times8$ de modo que \textbf{ninguna
+amenace a otra}.
+
+Aunque el enunciado esté planteado sobre un tablero, la estructura del problema es
+exactamente la misma que aparece en múltiples problemas de negocio: se trata de
+\textbf{seleccionar la mayor cantidad de elementos posible de un conjunto, sujeto a
+que ciertos pares son incompatibles entre sí}. Es el mismo esqueleto de la
+asignación de antenas que no pueden interferirse, de turnos que no pueden
+solaparse, de productos químicos que no pueden almacenarse juntos o de máquinas que
+no pueden operar simultáneamente. Lo que cambia es la historia; el modelo es el
+mismo. Por eso el ajedrez es un excelente banco de pruebas: las reglas son
+inequívocas y la solución se puede verificar a simple vista.
+
+\begin{ayuda}{Observación: el bloqueo no cambia el problema}
+\vspace{2pt}
+Al modelar podría surgir la duda de si una pieza ``bloquea'' la línea de otra y la
+protege. No hace falta preocuparse por eso: como \emph{todas} las piezas del tablero
+son piezas que ustedes colocaron, el bloqueo es \textbf{irrelevante}. En efecto, una
+pieza deslizante (torre, alfil o reina) siempre amenaza a la pieza \textbf{más
+cercana} sobre su línea de acción; si hubiera una pieza intermedia, esa pieza
+intermedia ya estaría amenazada, y eso por sí solo viola la condición del problema.
+
+En consecuencia, exigir que \textbf{ninguna pieza amenace a otra} es
+\textbf{equivalente} a exigir que \textbf{no haya dos piezas sobre una misma línea de
+acción}, y pueden modelar directamente esta última condición.
+\end{ayuda}
+
+% =============================================================================
+\section*{Recordatorio: movimiento y amenaza de las piezas}
+% =============================================================================
+
+En los diagramas, la casilla \textbf{oscura} es la posición de la pieza y las
+casillas \textbf{claras} son las que esa pieza amenaza.
+
+\begin{center}
+\begin{tabular}{cccc}
+\tablero{0/2,1/2,3/2,4/2,2/0,2/1,2/3,2/4}{T} &
+\tablero{0/0,1/1,3/3,4/4,0/4,1/3,3/1,4/0}{A} &
+\tablero{0/2,1/2,3/2,4/2,2/0,2/1,2/3,2/4,0/0,1/1,3/3,4/4,0/4,1/3,3/1,4/0}{R} &
+\tablero{1/0,3/0,0/1,4/1,0/3,4/3,1/4,3/4}{C} \\[0.3em]
+\textbf{Torre} & \textbf{Alfil} & \textbf{Reina} & \textbf{Caballo}
+\end{tabular}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}lp{10.2cm}@{}}
+\toprule
+\textbf{Pieza} & \textbf{Cómo se mueve y amenaza} \\
+\midrule
+\textbf{Torre} & Se mueve en línea recta a lo largo de su \textbf{fila} y de su
+\textbf{columna}. Amenaza toda casilla que comparta fila o columna con ella. \\
+\textbf{Alfil} & Se mueve en \textbf{diagonal}. Amenaza toda casilla que esté sobre
+alguna de sus dos diagonales. Un alfil nunca cambia el color de casilla. \\
+\textbf{Reina} & Combina la torre y el alfil: se mueve por \textbf{fila, columna y
+diagonales}. Es la pieza de mayor alcance. \\
+\textbf{Caballo} & Se mueve en \textbf{``L''}: dos casillas en una dirección y una
+en la perpendicular. Amenaza hasta 8 casillas y es la única pieza que
+\textbf{salta}: su amenaza no depende de las casillas intermedias. \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Movimiento y amenaza de las cuatro piezas consideradas.}
+\end{center}
+
+\noindent\textit{Nota sobre coordenadas:} conviene indexar las casillas por
+\textbf{fila} $i$ y \textbf{columna} $j$, con $i,j\in\{1,\dots,8\}$. Con esa
+notación, dos casillas $(i,j)$ y $(k,l)$ están en la misma diagonal si
+$i-j=k-l$ o bien $i+j=k+l$.
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte A \quad Formulación de los Modelos \hfill\normalfont\normalsize(40 pts)}
+% =============================================================================
+
+Formule un \textbf{modelo de optimización lineal entera} para cada uno de los
+siguientes cuatro casos, en un tablero de $8\times8$:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Torres:} máxima cantidad de torres sin que ninguna amenace a otra.
+    \item \textbf{Alfiles:} máxima cantidad de alfiles sin amenazas mutuas.
+    \item \textbf{Reinas:} máxima cantidad de reinas sin amenazas mutuas.
+    \item \textbf{Caballos:} máxima cantidad de caballos sin amenazas mutuas.
+\end{enumerate}
+
+Para \textbf{cada} modelo, su formulación debe ser completamente algebraica (en
+notación matemática, \textbf{no} en código) y debe contener:
+
+\begin{enumerate}[label=\arabic*., leftmargin=*, topsep=2pt]
+    \item \textbf{Conjuntos e índices:} cómo indexa las casillas del tablero.
+    \item \textbf{Variables de decisión:} defina con precisión su significado y su
+          \textbf{tipo} y \textbf{dominio}. Piense qué representa cada variable y
+          por qué debe ser del tipo que usted propone.
+    \item \textbf{Función objetivo:} la expresión a maximizar.
+    \item \textbf{Restricciones:} escriba y \textbf{nombre} las restricciones que
+          impiden que dos piezas se amenacen. Explique, para cada pieza, cuál es la
+          \textbf{condición geométrica} que define una amenaza y cómo la traduce a
+          desigualdades lineales.
+\end{enumerate}
+
+\begin{ayuda}{Sugerencia de método (no de solución)}
+\vspace{2pt}
+Note que las cuatro formulaciones comparten el mismo esqueleto y solo cambian en
+\emph{qué pares de casillas son incompatibles}. Conviene definir primero, de forma
+general, qué significa que ``la casilla $(i,j)$ y la casilla $(k,l)$ estén en
+conflicto para la pieza $P$'' y recién entonces particularizar a cada pieza.
+Reflexione además si conviene escribir una restricción \textbf{por cada par de
+casillas en conflicto} o si, para alguna pieza en particular, existe una forma más
+\textbf{compacta y agregada} de expresar lo mismo (por ejemplo, agrupando por fila,
+columna o diagonal). Ambas alternativas son válidas; discutir la diferencia suma
+puntos.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte B \quad Resolución con GurobiPy \hfill\normalfont\normalsize(30 pts)}
+% =============================================================================
+
+Implemente y resuelva los cuatro modelos de la Parte~A con \texttt{gurobipy}.
+Responda:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Reporte, para cada pieza, la \textbf{cantidad máxima} obtenida.
+          Preséntelo en una tabla comparativa.
+    \item Muestre, para cada caso, \textbf{una configuración óptima} del tablero
+          (una disposición concreta de las piezas que alcanza ese máximo).
+    \item \textbf{Verifique} que las soluciones son válidas: compruebe
+          explícitamente que ningún par de piezas se amenaza.
+    \item Analice y explique los resultados: ¿por qué unas piezas admiten muchas
+          más que otras? Ordene las piezas de menor a mayor cantidad máxima y
+          relacione ese orden con el \textbf{alcance} de cada pieza.
+    \item Para el caso de los \textbf{caballos}, observe la configuración óptima
+          que obtuvo. ¿Nota algún patrón en el \textbf{color de las casillas}
+          ocupadas? Explique a qué se debe.
+    \item ¿La solución óptima es \textbf{única} en cada caso? Si encuentra que no
+          lo es, explique qué significa que existan múltiples óptimos.
+\end{enumerate}
+
+\noindent\rule{\linewidth}{0.4pt}
+\newpage
+
+% =============================================================================
+\section*{Parte C \quad Combinación de Piezas por Valor \hfill\normalfont\normalsize(30 pts)}
+% =============================================================================
+
+Hasta aquí cada tablero contenía \textbf{un solo tipo} de pieza. Ahora
+generalizaremos: podremos colocar \textbf{piezas de distintos tipos
+simultáneamente} sobre el mismo tablero, y ya no maximizaremos la \emph{cantidad}
+de piezas sino el \textbf{valor total} del conjunto colocado.
+
+Usaremos la valoración clásica del ajedrez:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Pieza} & Reina & Torre & Alfil & Caballo \\
+\midrule
+\textbf{Valor} & 9 & 5 & 3 & 3 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Valor relativo de cada pieza.}
+\end{center}
+
+Las reglas se mantienen: en cada casilla puede haber \textbf{a lo más una pieza}, y
+\textbf{ninguna pieza puede amenazar a otra}, sin importar de qué tipo sea cada una.
+
+\begin{ayuda}{Ojo con las amenazas entre piezas distintas}
+\vspace{2pt}
+Cuando conviven piezas de distintos tipos, la condición de conflicto deja de ser
+simétrica en un solo sentido: dos piezas en las casillas $(i,j)$ y $(k,l)$ son
+incompatibles si \textbf{la primera amenaza a la segunda \emph{o} la segunda amenaza
+a la primera}. Por ejemplo, una torre y un caballo en la misma fila se amenazan
+(por la torre), aunque el caballo no ataque a la torre. Su modelo debe capturar
+ese ``o''.
+\end{ayuda}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Formule} el modelo general que permite colocar piezas de varios
+          tipos a la vez maximizando el valor total. Defina con cuidado las nuevas
+          variables de decisión (ahora deben distinguir \emph{qué} pieza va en
+          \emph{qué} casilla) y las restricciones de ocupación y de no amenaza.
+    \item \textbf{Caso 1 --- torres y alfiles.} Resuelva permitiendo únicamente
+          torres y alfiles. Reporte el valor total óptimo y cuántas piezas de cada
+          tipo se colocan. \textbf{Compare} ese valor con el que se obtendría
+          usando solo torres o solo alfiles (con los resultados de la Parte~B).
+          ¿Conviene mezclar? ¿Por cuánto?
+    \item \textbf{Caso 2 --- torres y caballos.} Resuelva ahora permitiendo torres
+          y caballos. Reporte valor total y composición. Compare nuevamente contra
+          las estrategias puras. ¿Conviene mezclar en este caso?
+    \item \textbf{Caso 3 --- las cuatro piezas.} Resuelva permitiendo los cuatro
+          tipos simultáneamente. ¿Qué composición resulta óptima?
+    \item \textbf{Análisis.} Los casos anteriores no se comportan igual: en alguno
+          de ellos mezclar piezas \emph{mejora} el valor respecto de usar un solo
+          tipo, y en otro no. Explique \textbf{por qué}. \emph{Pista:} piense en la
+          relación entre el \textbf{valor} de una pieza y cuántas de ellas
+          \textbf{caben} en el tablero, es decir, en el ``valor por casilla
+          ocupada'' que cada pieza es capaz de sostener.
+    \item \textbf{Restricción adicional.} Repita el Caso 3 exigiendo que haya
+          \textbf{al menos una pieza de cada tipo} sobre el tablero. ¿Cuánto valor
+          se pierde respecto del óptimo libre? Interprete ese costo en términos de
+          optimización: ¿qué representa esa diferencia?
+\end{enumerate}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Entregables}
+% =============================================================================
+
+\subsection*{1.\quad Informe (PDF)}
+
+Estructura mínima requerida (cada sección comienza en una nueva página):
+
+\begin{enumerate}[leftmargin=*, topsep=2pt]
+    \item \textbf{Portada:} nombre del curso, Tarea~3, integrantes, profesor,
+          ayudante y fecha.
+    \item \textbf{Introducción:} breve explicación del problema, incluyendo la
+          \textbf{descripción de las piezas y su comportamiento} en el tablero.
+    \item \textbf{Marco teórico:} conceptos utilizados (optimización lineal entera,
+          variables binarias, restricciones de incompatibilidad).
+    \item \textbf{Metodología y modelamiento:} las formulaciones completas de las
+          Partes~A y C.
+    \item \textbf{Desarrollo:} breve explicación de la implementación en
+          \texttt{gurobipy}.
+    \item \textbf{Resultados:} tablas con los máximos por pieza, las
+          configuraciones de tablero obtenidas y los valores de la Parte~C.
+          \begin{quote}
+          \textit{Ojo:} en esta sección van los resultados puros, sin
+          interpretación.
+          \end{quote}
+    \item \textbf{Análisis y conclusiones:} interpretación de los resultados y
+          respuestas a las preguntas de análisis. Sea \textbf{específico}; evite
+          frases genéricas del tipo ``el modelo funciona''.
+    \item \textbf{Referencias} (si aplica).
+\end{enumerate}
+
+\begin{ayuda}{Formalidades del informe (se descuentan puntos por incumplimiento)}
+\begin{itemize}[topsep=2pt]
+    \item Lenguaje técnico y formal, sin errores ortográficos ni gramaticales.
+    \item Texto \textbf{justificado}, fuente tamaño \textbf{12} (Times New Roman,
+          Arial u otra tipografía estándar).
+    \item Cada figura, gráfico o tabla debe llevar \textbf{título y fuente}. Si el
+          material es de elaboración propia, debe indicarse explícitamente.
+    \item Sean \textbf{breves y directos}. Se prefiere un análisis corto, directo
+          y correcto por sobre páginas de relleno.
+\end{itemize}
+\end{ayuda}
+
+\subsection*{2.\quad Cuaderno Jupyter (.ipynb)}
+
+\begin{itemize}[topsep=2pt]
+    \item Implementación \textbf{comentada} de los cuatro modelos de la Parte~B y
+          del modelo general de la Parte~C.
+    \item Impresión de los resultados y de las configuraciones de tablero
+          obtenidas.
+    \item Verificación explícita de que las soluciones no contienen amenazas.
+    \item Código limpio, ordenado y bien estructurado. \textbf{Un solo archivo de
+          código por grupo.}
+\end{itemize}
+
+\begin{ayuda}{Puntaje extra: visualización del tablero (+5 pts)}
+\vspace{2pt}
+Se otorgarán \textbf{5 puntos extra} si presentan una \textbf{visualización gráfica}
+de los tableros obtenidos (los cuatro de la Parte~B). Los 5 puntos son por el
+conjunto de las visualizaciones, no por cada una. Pueden resolverlo con la
+herramienta que prefieran; una alternativa cómoda es la librería \texttt{chess} de
+Python, aunque una figura hecha con \texttt{matplotlib} también es perfectamente
+válida. La visualización es \textbf{opcional}.
+\end{ayuda}
+
+\medskip
+\noindent\textbf{Formato de entrega:} comprima el informe y el notebook en un
+archivo \texttt{.zip} o \texttt{.rar} con el nombre \texttt{Tarea3\_GrupoN}.
+\textbf{No entregue los archivos por separado.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Plazos y Evaluación}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Plazo de entrega:} \textbf{lunes 27 de julio de 2026} a las
+          23:59.
+    \item \textbf{Grupos:} 2 a 3 integrantes (ni más ni menos).
+    \item \textbf{Inscripción:} anótense en los grupos de Canvas
+          (Personas~$\to$ Grupos~$\to$ Tarea~3\,--\,Grupo~n).
+\end{itemize}
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lc}
+\toprule
+\textbf{Criterio} & \textbf{Ponderación} \\
+\midrule
+Parte A: Formulación de los cuatro modelos      & 40\,\% \\
+Parte B: Resolución en Gurobi y análisis        & 30\,\% \\
+Parte C: Combinación de piezas por valor        & 30\,\% \\
+\midrule
+\textit{Visualización de los tableros}          & \textit{+5 pts extra} \\
+\textit{Calidad del informe y profundidad del análisis} &
+\textit{transversal} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Criterios de evaluación.}
+\end{center}
+
+\vspace{0.3em}
+\noindent\textit{La calidad del informe, la profundidad del análisis y la correcta
+interpretación de los resultados impactan de forma transversal en todas las
+partes.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Notas Importantes}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Deben usar \texttt{gurobipy}} para la implementación.
+    \item Recuerden que el \textbf{bloqueo es irrelevante}: basta con impedir que
+          dos piezas compartan una misma línea de acción (ver la observación de la
+          primera página).
+    \item Cada variable debe declararse con su \textbf{dominio y tipo correctos}.
+          Identificar el tipo adecuado es parte de la evaluación.
+    \item \textbf{Nombren} las restricciones al crearlas: facilita la lectura de la
+          solución y la depuración.
+    \item Construyan los modelos de forma \textbf{algebraica} (con conjuntos y
+          sumatorias sobre ellos); no escriban las 64 casillas una por una.
+    \item Pueden apoyarse en herramientas externas para entender el método, pero la
+          \textbf{formulación} y el \textbf{análisis} deben ser propios y quedar
+          plasmados en el informe.
+    \item En el informe y en el código deben figurar los \textbf{nombres de todos
+          los integrantes} del grupo.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\textit{Consultas al correo
+\href{mailto:vramireza@udd.cl}{\texttt{vramireza@udd.cl}} o al
+\texttt{+56\,9\,9912\,1814}
+(respondo siempre que puedo, dentro de horarios razonables).}
+\end{center}
+
+% =============================================================================
+\end{document}
+% =============================================================================
