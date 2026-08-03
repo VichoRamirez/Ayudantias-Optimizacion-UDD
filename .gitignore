@@ -33,3 +33,5 @@ CLAUDE.md
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+
+**/Local

@@ -1,0 +1,701 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage{multirow}
+\usepackage{caption}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+
+% ── Colores ──────────────────────────────────────────────────────────────────
+\definecolor{uddblue}{RGB}{0, 75, 135}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{codegray}{RGB}{100, 100, 100}
+\definecolor{codegreen}{RGB}{0, 120, 0}
+\definecolor{codeblue}{RGB}{0, 0, 180}
+\definecolor{codered}{RGB}{160, 0, 0}
+
+% ── Estilo de código Python ───────────────────────────────────────────────────
+\lstset{
+    language     = Python,
+    backgroundcolor = \color{lightgray},
+    basicstyle   = \small\ttfamily,
+    keywordstyle = \color{codeblue}\bfseries,
+    commentstyle = \color{codegreen}\itshape,
+    stringstyle  = \color{codered},
+    numberstyle  = \tiny\color{codegray},
+    numbers      = left,
+    stepnumber   = 1,
+    breaklines   = true,
+    frame        = single,
+    rulecolor    = \color{gray!40},
+    tabsize      = 4,
+    showstringspaces = false,
+    literate =
+        {á}{{\'{a}}}1 {é}{{\'{e}}}1 {í}{{\'{i}}}1
+        {ó}{{\'{o}}}1 {ú}{{\'{u}}}1 {ñ}{{\~{n}}}1
+        {Á}{{\'{A}}}1 {É}{{\'{E}}}1 {Í}{{\'{I}}}1
+        {Ó}{{\'{O}}}1 {Ú}{{\'{U}}}1 {Ñ}{{\~{N}}}1
+}
+
+% ── Cajas de ayuda ────────────────────────────────────────────────────────────
+\tcbuselibrary{skins, breakable}
+\newtcolorbox{ayuda}[1]{
+    colback   = lightgray,
+    colframe  = uddblue,
+    fonttitle = \bfseries\small,
+    title     = {#1},
+    breakable,
+    left      = 6pt,
+    right     = 6pt,
+    top       = 4pt,
+    bottom    = 4pt
+}
+
+% ── Encabezado y pie ─────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray} IIP314W\,--\,Optimización Aplicada a Negocios}
+\fancyhead[R]{\small\color{gray} Tarea 4\,--\,2026-T2}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{colorlinks=true, linkcolor=uddblue, urlcolor=uddblue}
+
+% ── Espaciado entre párrafos ──────────────────────────────────────────────────
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ── Título ───────────────────────────────────────────────────────────────────
+\begin{center}
+    {\Large\bfseries\color{uddblue}
+     (IIP314W) Optimización Aplicada a Negocios}\\[0.4em]
+    {\large Universidad del Desarrollo}\\[0.8em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.5em]
+    {\LARGE\bfseries Tarea 4}\\[0.3em]
+    {\large Red de Agroexportación con Inventario Perecible:\\
+     Modelamiento Multiperiodo, Dualidad y Holgura Complementaria}\\[0.5em]
+    \noindent\rule{\linewidth}{1.5pt}\\[0.8em]
+    \begin{tabular}{@{}ll@{}}
+        \textbf{Profesor:} & Ing.\ Rodrigo Trigo Vilches \\[0.3em]
+        \textbf{Ayudante:} & Lic.\ Vicente Ramírez Almonacid \\[0.3em]
+        \textbf{Período:}  & Año 2026\,--\,Trimestre 2
+    \end{tabular}
+\end{center}
+
+\vspace{1em}
+\noindent\rule{\linewidth}{0.4pt}
+\vspace{0.5em}
+
+% =============================================================================
+\section*{Contexto: AgroAndes Exporta S.A.}
+% =============================================================================
+
+\textbf{AgroAndes Exporta S.A.}\ es una empresa exportadora de fruta fresca que
+debe planificar su red logística a lo largo de la \textbf{temporada de cosecha},
+dividida en un conjunto de \textbf{periodos} (semanas) $t\in\mathcal{T}$. La red
+tiene tres eslabones y la fruta fluye siempre en el mismo sentido:
+\[
+\text{\textbf{packing}} \;\longrightarrow\;
+\text{\textbf{frigoríficos} (cámaras de frío)} \;\longrightarrow\;
+\text{\textbf{mercados} de exportación}.
+\]
+
+En el primer eslabón están las plantas de \textbf{packing} $p\in\mathcal{P}$, que
+reciben la fruta recién cosechada, la seleccionan y la embalan en pallets listos
+para exportar. Aquí aparece la primera particularidad del negocio: \textbf{la
+cosecha es estacional}. Solo durante las primeras semanas de la temporada
+ingresa fruta fresca a proceso; después la temporada termina y ya \emph{no hay
+más fruta que procesar}. Esto se refleja en que la capacidad de proceso
+$\mathit{Cap}_{pt}$ de cada packing es positiva solo en los periodos de cosecha y
+\textbf{cae a cero} una vez que la temporada cierra. Además, procesar una tonelada
+de fruta en el packing $p$ durante el periodo $t$ tiene un \textbf{costo unitario}
+$\mathit{cf}_{pt}$ (compra de fruta al productor más proceso) que \emph{cambia a lo
+largo de la temporada}: al comienzo, con la cosecha en su punto máximo, la fruta
+es abundante y barata; a medida que avanza la temporada se encarece.
+
+En el segundo eslabón están los \textbf{frigoríficos} $b\in\mathcal{B}$, cámaras
+de frío regionales que reciben la fruta embalada, la \textbf{almacenan} y desde
+ahí despachan a los mercados. Como toda instalación, un frigorífico se puede
+tener \textbf{operativo} o cerrado en cada periodo, y se puede \textbf{abrir} uno
+que estaba cerrado o \textbf{cerrar} uno que estaba abierto, pagando cada vez el
+costo de la transición. Aquí aparece la segunda —y central— particularidad: la
+fruta almacenada es \textbf{perecible}. Una tonelada de fruta no puede permanecer
+en cámara indefinidamente: pierde calidad de exportación y, pasado cierto tiempo,
+ya no es despachable. Concretamente, \textbf{la fruta puede permanecer almacenada
+a lo más $L$ periodos} desde que ingresa al frigorífico.
+
+En el tercer eslabón están los \textbf{mercados} de exportación $j\in\mathcal{J}$,
+cada uno con una \textbf{demanda} $d_{jt}$ (pedidos comprometidos) que debe
+cumplirse en cada periodo.
+
+El desajuste entre \emph{cuándo hay fruta} (temprano, barata, pero acotada por la
+capacidad de cosecha) y \emph{cuándo hay demanda} (repartida a lo largo de toda la
+temporada) obliga a la empresa a \textbf{almacenar}: producir fruta barata al
+inicio y guardarla en frío para despacharla más adelante. Pero la perecibilidad
+pone un límite duro a esa estrategia. La gerencia quiere el plan de
+\emph{apertura, cierre, proceso, transporte y almacenamiento} que satisfaga toda
+la demanda de la temporada al \textbf{mínimo costo total}.
+
+\begin{ayuda}{Trabajo en grupo}
+\vspace{2pt}
+La tarea se desarrolla \textbf{en parejas o grupos de 3} (ni más ni menos). Tanto
+el informe como el código deben incluir los nombres de todos los integrantes.
+\textbf{Es obligatorio resolver el modelo con \texttt{gurobipy}}.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Datos del problema}
+% =============================================================================
+
+La empresa opera con $|\mathcal{P}|=2$ plantas de packing ($A$, $B$),
+$|\mathcal{B}|=3$ frigoríficos ($F_1, F_2, F_3$) y $|\mathcal{J}|=3$ mercados de
+exportación ($X$, $Y$, $Z$), sobre un horizonte de $|\mathcal{T}|=4$ periodos
+($t=1,2,3,4$). La \textbf{vida útil} de la fruta en cámara es $L=2$ periodos.
+Todas las cantidades de fruta están en \textbf{toneladas}; todos los costos, en
+\textbf{miles de USD} (costos unitarios en miles de USD por tonelada).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Demanda $d_{jt}$ (ton)} & \textbf{$t=1$} & \textbf{$t=2$} &
+\textbf{$t=3$} & \textbf{$t=4$} \\
+\midrule
+Mercado $X$ & 25 & 35 & 45 & 55 \\
+Mercado $Y$ & 15 & 20 & 25 & 30 \\
+Mercado $Z$ & 0  & 5  & 10 & 15 \\
+\midrule
+\textbf{Total} & 40 & 60 & 80 & 100 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Demanda comprometida por mercado y periodo.}
+\end{center}
+
+\textbf{Plantas de packing.} La capacidad de proceso $\mathit{Cap}_{pt}$ es
+positiva solo durante la ventana de cosecha ($t=1,2$) y cae a cero después. El
+costo unitario de proceso $\mathit{cf}_{pt}$ sube a lo largo de la temporada.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccc@{\hskip 1.2em}cccc}
+\toprule
+ & \multicolumn{4}{c}{\textbf{$\mathit{Cap}_{pt}$ (ton)}} &
+   \multicolumn{4}{c}{\textbf{$\mathit{cf}_{pt}$ (\$/ton)}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+\textbf{Packing} & $t{=}1$ & $t{=}2$ & $t{=}3$ & $t{=}4$
+                 & $t{=}1$ & $t{=}2$ & $t{=}3$ & $t{=}4$ \\
+\midrule
+$A$ & 100 & 100 & 0 & 0 & 4 & 9  & --- & --- \\
+$B$ & 60  & 60  & 0 & 0 & 5 & 10 & --- & --- \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Capacidad de proceso y costo unitario de proceso por packing y
+periodo. En $t=3,4$ no hay cosecha ($\mathit{Cap}=0$), por lo que $\mathit{cf}$ es
+irrelevante.}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Packing} &
+\textbf{$\mathit{FP}_{p}$ (fijo/per.)} &
+\textbf{$\mathit{AP}_{p}$ (abrir)} &
+\textbf{$\mathit{CP}_{p}$ (cerrar)} &
+\textbf{Estado inicial $y_{p0}$} \\
+\midrule
+$A$ & 100 & 200 & 150 & Operativa (1) \\
+$B$ & 90  & 150 & 120 & Cerrada (0) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Costos fijos y de transición de las plantas de packing. El costo
+fijo de operar se paga en cada periodo en que la planta está operativa.}
+\end{center}
+
+\textbf{Frigoríficos.} Cada frigorífico tiene una capacidad de almacenamiento
+$\mathit{Alm}_b$, un costo fijo de operación $\mathit{FB}_b$ por periodo, costos de
+apertura/cierre $\mathit{AB}_b,\mathit{CB}_b$ y un costo de mantención de
+inventario $h_b$ por tonelada almacenada al cierre de cada periodo.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Frig.} & $\mathit{Alm}_{b}$ & $\mathit{FB}_{b}$ & $\mathit{AB}_{b}$ &
+$\mathit{CB}_{b}$ & $h_{b}$ & \textbf{Estado inicial $z_{b0}$} \\
+ & (ton) & (fijo/per.) & (abrir) & (cerrar) & (\$/ton) & \\
+\midrule
+$F_1$ & 80 & 40 & 120 & 80 & 1 & Operativo (1) \\
+$F_2$ & 60 & 35 & 100 & 70 & 1 & Cerrado (0) \\
+$F_3$ & 50 & 30 & 90  & 60 & 2 & Cerrado (0) \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Parámetros de los frigoríficos. El inventario inicial es
+$s_{b0}=0$ para los tres.}
+\end{center}
+
+\textbf{Costos unitarios de transporte.} Enviar una tonelada de un packing $p$ a un
+frigorífico $b$ cuesta $\mathit{cp}_{pb}$; enviarla de un frigorífico $b$ a un
+mercado $j$ cuesta $\mathit{cg}_{bj}$.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{minipage}{0.46\linewidth}\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{$\mathit{cp}_{pb}$} & $F_1$ & $F_2$ & $F_3$ \\
+\midrule
+$A$ & 3 & 4 & 6 \\
+$B$ & 5 & 3 & 4 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Packing $\to$ frigorífico.}
+\end{minipage}\hfill
+\begin{minipage}{0.46\linewidth}\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{$\mathit{cg}_{bj}$} & $X$ & $Y$ & $Z$ \\
+\midrule
+$F_1$ & 2 & 5 & 8 \\
+$F_2$ & 6 & 3 & 5 \\
+$F_3$ & 8 & 6 & 3 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Frigorífico $\to$ mercado.}
+\end{minipage}
+\end{center}
+
+\noindent\textit{Nota sobre el big-M.} Para ligar el flujo entrante a un
+frigorífico con su estado de apertura necesitarán una cota superior válida
+(big-M) del flujo que puede entrar a un frigorífico en un periodo. Una cota
+natural es la suma de las capacidades de proceso de los packing en ese periodo,
+$M^{B}_{t}=\sum_{p}\mathit{Cap}_{pt}$. Recuerden elegir el big-M lo más ajustado
+posible.
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte A \quad Formulación del Modelo \hfill\normalfont\normalsize(30 pts)}
+% =============================================================================
+
+Formule un \textbf{modelo de optimización} que minimice el costo total de la
+temporada. Su formulación debe ser completamente algebraica (en notación
+matemática, \textbf{no} en código) y \textbf{paramétrica} (use la notación de los
+conjuntos y parámetros, no los números concretos). \textbf{Toda la información
+necesaria está en el Contexto y en los Datos}; una parte esencial de la tarea es
+que \textbf{ustedes identifiquen} los componentes del modelo. Su formulación debe
+contener:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Conjuntos e índices:} defina los conjuntos para indexar packing,
+          frigoríficos, mercados y periodos.
+    \item \textbf{Parámetros:} liste, con su notación, todos los datos del
+          problema (incluyendo la vida útil $L$ y los estados iniciales).
+    \item \textbf{Variables de decisión:} identifique y defina \textbf{todas} las
+          variables. Necesitará binarias para el \textbf{estado} (operativo/cerrado)
+          y para las \textbf{transiciones} (abrir/cerrar) de cada instalación, y
+          variables continuas para los \textbf{flujos} en cada tramo y el
+          \textbf{inventario}. Para cada una indique su \textbf{significado},
+          \textbf{unidades}, \textbf{dominio} y \textbf{tipo}.
+    \item \textbf{Función objetivo:} plantee el costo total a minimizar. Debe
+          incluir: costos fijos de operación, costos de apertura y cierre, costo
+          de proceso de la fruta ($\mathit{cf}_{pt}$), costos de transporte de
+          ambos tramos y costo de inventario.
+    \item \textbf{Restricciones:} formule y \textbf{nombre} todas las
+          restricciones. Debe modelar, como mínimo:
+          \begin{itemize}[leftmargin=1.4em, topsep=1pt]
+            \item capacidad de proceso de cada packing, ligada a su estado
+                  (un packing cerrado no procesa);
+            \item activación del flujo entrante a un frigorífico según su estado
+                  (un frigorífico cerrado no recibe fruta) y capacidad de
+                  almacenamiento;
+            \item \textbf{balance de inventario} en cada frigorífico y periodo
+                  (lo que queda es lo que había, más lo que entró, menos lo que
+                  salió);
+            \item satisfacción de la demanda de cada mercado en cada periodo;
+            \item lógica de \textbf{transición} abrir/cerrar que ligue el estado
+                  entre periodos consecutivos (y con el estado inicial), impidiendo
+                  abrir y cerrar simultáneamente;
+            \item \textbf{perecibilidad}: la fruta no puede permanecer almacenada
+                  más de $L$ periodos. \emph{Sugerencia:} el inventario al cierre
+                  de un periodo $t$ solo puede estar compuesto por fruta que
+                  ingresó al frigorífico en los últimos $L$ periodos.
+          \end{itemize}
+          Incluya los dominios de las variables.
+\end{enumerate}
+
+\noindent\textit{Sugerencia de método (no de solución): traduzca cada frase del
+Contexto en una o más restricciones. La perecibilidad y la ventana de cosecha son
+las dos ideas nuevas de esta tarea; el resto (costos fijos, aperturas/cierres,
+balance de inventario) sigue la misma lógica de las ayudantías de modelamiento.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Parte B \quad Implementación y Resolución en Gurobi \hfill\normalfont\normalsize(25 pts)}
+% =============================================================================
+
+Implemente el modelo de la Parte~A en \texttt{gurobipy} y resuélvalo con los datos
+entregados. Responda:
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Reporte el \textbf{costo total óptimo} y descompóngalo por componente
+          (fijos, transiciones, proceso, transporte tramo 1, transporte tramo 2,
+          inventario).
+    \item Presente el \textbf{plan de apertura y cierre}: en qué periodos está
+          operativa cada planta y cada frigorífico, y en qué periodo exacto ocurre
+          cada apertura o cierre.
+    \item Presente la \textbf{trayectoria de inventario} $s_{bt}$ de cada
+          frigorífico a lo largo del horizonte.
+    \item Verifique e informe que se cumplen: (i) la cobertura de toda la demanda,
+          (ii) el balance de inventario, y (iii) la restricción de perecibilidad
+          (ninguna tonelada permanece almacenada más de $L$ periodos).
+    \item Interprete la solución en \textbf{lenguaje de negocios}: ¿por qué se
+          almacena fruta en los primeros periodos? ¿por qué se cierran las plantas
+          de packing a mitad de temporada? ¿algún frigorífico queda sin usar?
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Sintaxis de \texttt{gurobipy} (referencia del lenguaje)}
+\vspace{2pt}
+Esta caja es solo una referencia de \emph{sintaxis}, con nombres genéricos:
+\textbf{no} es el modelo ni indica qué variables o restricciones usar. Construyan
+el modelo de forma \textbf{algebraica}, con \texttt{addVars} y \texttt{quicksum}
+sobre los conjuntos.
+\begin{lstlisting}
+import gurobipy as gp
+from gurobipy import GRB, quicksum
+
+m = gp.Model("agroandes")
+
+# Ejemplos de sintaxis (nombres genericos, NO son el modelo):
+w = m.addVars(Conj1, Conj2, vtype=GRB.BINARY, name="w")    # binaria 0/1
+f = m.addVars(Conj1, Conj2, Conj3, lb=0, name="f")         # continua >= 0
+
+m.setObjective(quicksum(...), GRB.MINIMIZE)
+m.addConstrs((... for t in T), name="mi_restr")            # nombrela!
+
+m.optimize()
+if m.Status == GRB.OPTIMAL:
+    print("Optimo:", m.ObjVal)
+    print(f[i,j,t].X)   # valor de una variable en la solucion
+\end{lstlisting}
+Para las restricciones que dependen del periodo anterior (transiciones, balance),
+recuerden tratar aparte el \textbf{primer periodo} usando el estado/inventario
+inicial dado.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+\newpage
+% =============================================================================
+\section*{Parte C \quad Dualidad, Precios Sombra y Holgura Complementaria \hfill\normalfont\normalsize(30 pts)}
+% =============================================================================
+
+La \textbf{dualidad} y la \textbf{holgura complementaria} son propiedades de los
+problemas \textbf{lineales} (LP). Su modelo, en cambio, es un problema
+\textbf{entero-mixto} (MIP): tiene variables binarias, y para un MIP los precios
+sombra no están definidos de la forma clásica. La técnica estándar para obtener
+información dual de un MIP es \textbf{fijar las variables enteras en su valor
+óptimo} y resolver el \textbf{LP resultante} (con las binarias ya fijas, el modelo
+es lineal en las variables continuas). Sobre ese LP sí valen los precios sombra y
+la holgura complementaria.
+
+\begin{ayuda}{Ayuda -- Fijar las binarias y obtener el LP (\texttt{model.fixed})}
+\vspace{2pt}
+Tras resolver el MIP, \texttt{gurobipy} entrega directamente el \textbf{modelo
+fijo}: una copia del modelo con todas las variables enteras fijadas en su valor
+óptimo y declaradas continuas. Ese modelo \textbf{sí es un LP} y de él se pueden
+leer los atributos duales:
+\begin{lstlisting}
+m.optimize()                 # 1) resolver el MIP
+fx = m.fixed()               # 2) LP con binarias fijas al optimo
+fx.optimize()                # 3) resolver el LP
+print("Es MIP?", fx.IsMIP)   # -> 0 (es un LP: hay duales disponibles)
+\end{lstlisting}
+Sobre \texttt{fx} podrán consultar \texttt{.Pi}, \texttt{.Slack} y \texttt{.RC}.
+\end{ayuda}
+
+% ── C.1 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.1 \quad Precios sombra de la demanda \hfill\normalfont\normalsize(12 pts)}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Obtenga el \textbf{precio sombra} $\pi_{jt}$ de cada restricción de
+          demanda (mercado $j$, periodo $t$) sobre el LP con binarias fijas.
+    \item Interprete en \textbf{lenguaje de negocios}: ¿qué significa $\pi_{jt}$?
+          ¿Cuánto costaría atender una tonelada adicional de pedido en el mercado
+          $X$ en el periodo $t=4$?
+    \item Ordene los pares (mercado, periodo) según su precio sombra.
+          ¿En qué mercado y periodo es \textbf{más caro} servir una tonelada
+          adicional? Explique por qué —relacionándolo con la ventana de cosecha,
+          el costo de proceso creciente y la perecibilidad.
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Precios sombra y holguras en Gurobi}
+\begin{lstlisting}
+for c in fx.getConstrs():
+    print(f"{c.ConstrName:<20} Pi = {c.Pi:8.3f}   Slack = {c.Slack:8.3f}")
+\end{lstlisting}
+\texttt{c.Pi} es el valor dual (precio sombra) de la restricción: el cambio en el
+óptimo por unidad de su lado derecho (RHS). \texttt{c.Slack} es su holgura. Para
+que los nombres sean legibles, \textbf{nombren} las restricciones al crearlas
+(por ejemplo \texttt{name="demanda"}); así \texttt{ConstrName} las identifica.
+\emph{Convención de signos (problema de minimización):} una restricción de
+demanda ($\ge$) tiene $\pi\ge 0$ (relajar la exige más costo); una de capacidad
+($\le$) tiene $\pi\le 0$ (más recurso reduce el costo).
+\end{ayuda}
+
+% ── C.2 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.2 \quad Holgura complementaria \hfill\normalfont\normalsize(12 pts)}
+
+La \textbf{holgura complementaria} afirma que, en el óptimo, para cada restricción
+se cumple $\pi_i \cdot (\text{holgura}_i)=0$: o la restricción está \textbf{activa}
+(holgura cero) o su precio sombra es cero (o ambos). Análogamente, para cada
+variable, $(\text{costo reducido})\cdot(\text{valor de la variable})=0$.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item \textbf{Verifique numéricamente} la holgura complementaria sobre el LP
+          con binarias fijas: para \textbf{todas} las restricciones, compruebe que
+          $|\pi_i \cdot \text{Slack}_i|$ es prácticamente cero (a tolerancia
+          numérica). Reporte el máximo valor encontrado.
+    \item Elija \textbf{dos} restricciones de demanda con holgura cero y
+          \textbf{dos} restricciones con holgura positiva (por ejemplo, de
+          capacidad de almacenamiento o de proceso). Para cada una, muestre su par
+          $(\pi_i,\text{Slack}_i)$ y explique en palabras por qué el producto es
+          cero.
+    \item Tome una variable de flujo que valga cero en el óptimo y verifique que
+          su \textbf{costo reducido} (\texttt{.RC}) es coherente con la holgura
+          complementaria. Interprete qué significa económicamente que esa ruta
+          \emph{no} se use.
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Costos reducidos y verificación de la holgura complementaria}
+\begin{lstlisting}
+# Costo reducido de las variables (sobre el LP fijo)
+for v in fx.getVars():
+    if abs(v.X) < 1e-9:              # variables en cero
+        print(f"{v.VarName:<14} X = {v.X:6.2f}  RC = {v.RC:8.3f}")
+
+# Verificacion global de holgura complementaria
+peor = max(abs(c.Pi * c.Slack) for c in fx.getConstrs())
+print("max |Pi * Slack| =", peor)    # debe ser ~ 0
+\end{lstlisting}
+\texttt{v.RC} es el costo reducido de la variable \texttt{v}. En un óptimo, una
+variable con valor cero tiene costo reducido $\ge 0$ (en minimización): usarla
+\emph{empeoraría} el costo, por eso no se usa.
+\end{ayuda}
+
+% ── C.3 ──────────────────────────────────────────────────────────────────────
+\subsection*{C.3 \quad El precio de la perecibilidad \hfill\normalfont\normalsize(6 pts)}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Identifique cuáles restricciones de \textbf{perecibilidad} están
+          \textbf{activas} (holgura cero) en el óptimo y cuál es su precio sombra.
+    \item Interprete económicamente ese precio sombra: ¿qué le está diciendo a la
+          empresa sobre el valor de que la fruta \emph{durara un poco más} en
+          cámara? Conecte su respuesta con la Parte~D.
+\end{enumerate}
+
+\noindent\rule{\linewidth}{0.4pt}
+\newpage
+% =============================================================================
+\section*{Parte D \quad El Valor de la Vida Útil \hfill\normalfont\normalsize(15 pts)}
+% =============================================================================
+
+La perecibilidad ($L$) no es un dato inamovible: invertir en mejor tecnología de
+frío, atmósfera controlada o mejores variedades puede \textbf{extender} la vida
+útil de la fruta. Esta parte cuantifica cuánto vale eso.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, topsep=2pt]
+    \item Resuelva el modelo (el MIP completo) para \textbf{cada valor} de la vida
+          útil $L\in\{1,2,3,4\}$. Para cada $L$ registre si el problema es
+          \textbf{factible} y, si lo es, el \textbf{costo total óptimo}.
+    \item Grafique el \textbf{costo óptimo} en función de $L$. Comente la forma de
+          la curva: ¿qué ocurre con $L=1$? ¿a partir de qué valor de $L$ el costo
+          deja de mejorar (se \textbf{aplana})? ¿Por qué?
+    \item Calcule el \textbf{ahorro} que produce pasar de $L=2$ a $L=3$. Relacione
+          ese ahorro con el precio sombra de la perecibilidad obtenido en la
+          Parte~C.3: ¿son consistentes?
+    \item En términos de negocio: si extender la vida útil de $2$ a $3$ periodos
+          costara una cierta inversión por temporada, ¿cómo usaría este análisis
+          para decidir si conviene? ¿Y pasar de $3$ a $4$?
+\end{enumerate}
+
+\begin{ayuda}{Ayuda -- Resolver el modelo variando un parámetro}
+\vspace{2pt}
+Conviene encapsular la construcción y resolución del modelo en una \textbf{función}
+que reciba $L$ y devuelva el estado y el costo, para llamarla en un bucle:
+\begin{lstlisting}
+def resolver(L):
+    m = construir_modelo(L)     # arma el MIP con esa vida util
+    m.Params.OutputFlag = 0     # silenciar salida dentro del bucle
+    m.optimize()
+    if m.Status == GRB.OPTIMAL:
+        return m.ObjVal
+    return None                 # infactible u otro estado
+
+for L in [1, 2, 3, 4]:
+    val = resolver(L)
+    print(L, "infactible" if val is None else round(val, 1))
+\end{lstlisting}
+Si para algún $L$ el modelo resulta \textbf{infactible}, \texttt{m.Status} no será
+\texttt{GRB.OPTIMAL} (será \texttt{GRB.INFEASIBLE}); repórtenlo como tal en lugar
+de leer \texttt{m.ObjVal}.
+\end{ayuda}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Entregables}
+% =============================================================================
+
+\subsection*{1.\quad Informe (PDF)}
+
+Estructura mínima requerida (cada sección comienza en una nueva página):
+
+\begin{enumerate}[leftmargin=*, topsep=2pt]
+    \item \textbf{Portada:} nombre del curso, Tarea~4, integrantes, profesor,
+          ayudante y fecha.
+    \item \textbf{Introducción:} descripción del problema de negocio y su
+          relevancia.
+    \item \textbf{Marco teórico:} conceptos clave (variables binarias de
+          estado/transición, big-M, balance de inventario, \textbf{dualidad},
+          \textbf{precios sombra} y \textbf{holgura complementaria}).
+    \item \textbf{Desarrollo (metodología):} la formulación completa de la
+          Parte~A y cómo se implementó y resolvió en \texttt{gurobipy}, incluyendo
+          la técnica de fijar binarias para el análisis dual.
+    \item \textbf{Resultados:} presente \textbf{solo los resultados importantes}
+          —solución óptima, plan de apertura/cierre, inventario, precios sombra,
+          verificación de holgura complementaria y la curva de la Parte~D.
+          \begin{quote}
+          \textit{Ojo:} en esta sección van los resultados puros, sin
+          interpretación.
+          \end{quote}
+    \item \textbf{Análisis de resultados:} interpretación en lenguaje de negocios
+          de la solución, de los precios sombra y del valor de la vida útil.
+    \item \textbf{Conclusiones:} sea \textbf{específico}. Evite frases genéricas
+          del tipo ``el modelo funciona''.
+    \item \textbf{Referencias} (si aplica).
+\end{enumerate}
+
+\begin{ayuda}{Formalidades del informe (se descuentan puntos por incumplimiento)}
+\begin{itemize}[topsep=2pt]
+    \item Lenguaje técnico y formal, sin errores ortográficos ni gramaticales.
+    \item Texto \textbf{justificado}, fuente tamaño \textbf{12} (Times New Roman,
+          Arial u otra tipografía estándar).
+    \item Cada figura, gráfico o tabla debe llevar \textbf{título y fuente}. Si el
+          material es de elaboración propia, debe indicarse explícitamente.
+    \item Sean \textbf{breves y directos}. Se prefiere un análisis corto, directo
+          y correcto por sobre páginas de relleno.
+\end{itemize}
+\end{ayuda}
+
+\subsection*{2.\quad Cuaderno Jupyter (.ipynb)}
+
+\begin{itemize}[topsep=2pt]
+    \item Implementación \textbf{comentada} del modelo en \texttt{gurobipy}
+          (Parte~B), con variables binarias y continuas.
+    \item Extracción e impresión de la solución: plan de apertura/cierre,
+          inventario, flujos y verificación de factibilidad.
+    \item Análisis dual (Parte~C): fijar binarias con \texttt{model.fixed()},
+          precios sombra, costos reducidos y verificación de holgura complementaria.
+    \item Análisis del valor de la vida útil (Parte~D) con su gráfico.
+    \item Código limpio, ordenado y bien estructurado.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Formato de entrega:} comprima el informe y el notebook en un
+archivo \texttt{.zip} o \texttt{.rar} con el nombre \texttt{Tarea4\_GrupoN}.
+\textbf{No entregue los archivos por separado.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Plazos y Evaluación}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Plazo de entrega:} Miercoles 12 de Agosto (conversable).
+    \item \textbf{Grupos:} 2 a 3 integrantes (ni más ni menos).
+    \item \textbf{Inscripción:} anótense en los grupos de Canvas
+          (Personas~$\to$ Grupos~$\to$ Tarea~4\,--\,Grupo~n).
+\end{itemize}
+
+\vspace{0.5em}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lc}
+\toprule
+\textbf{Criterio} & \textbf{Ponderación} \\
+\midrule
+Parte A: Formulación del modelo                          & 30\,\% \\
+Parte B: Implementación y resolución en Gurobi           & 25\,\% \\
+Parte C: Dualidad, precios sombra y holgura complementaria & 30\,\% \\
+Parte D: El valor de la vida útil                        & 15\,\% \\
+\midrule
+\textit{Calidad del informe y profundidad del análisis} &
+\textit{transversal} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Criterios de evaluación.}
+\end{center}
+
+\vspace{0.3em}
+\noindent\textit{La calidad del informe, la profundidad del análisis y la correcta
+interpretación de los resultados en lenguaje de negocios impactan de forma
+transversal en todas las partes.}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+% =============================================================================
+\section*{Notas Importantes}
+% =============================================================================
+
+\begin{itemize}[topsep=2pt]
+    \item \textbf{Deben usar \texttt{gurobipy}} para la implementación.
+    \item Cada variable debe declararse con su \textbf{dominio y tipo correctos}
+          (continua o binaria, según lo que represente). Identificar los tipos es
+          parte de la evaluación.
+    \item \textbf{Nombren} las restricciones al crearlas: es indispensable para
+          leer los precios sombra y las holguras en la Parte~C.
+    \item Construyan el modelo de forma \textbf{algebraica} (con conjuntos,
+          \texttt{addVars} y \texttt{quicksum}); no escriban los números uno a uno
+          dentro de las restricciones.
+    \item Los atributos duales (\texttt{.Pi}, \texttt{.Slack}, \texttt{.RC}) solo
+          están disponibles \textbf{sobre el LP con binarias fijas}
+          (\texttt{model.fixed()}) y solo si el estado es \texttt{GRB.OPTIMAL}.
+    \item En el informe y en el código deben figurar los \textbf{nombres de todos
+          los integrantes} del grupo.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\textit{Consultas al correo
+\href{mailto:vramireza@udd.cl}{\texttt{vramireza@udd.cl}} o al
+\texttt{+56\,9\,9912\,1814}
+(respondo siempre que puedo, dentro de horarios razonables).}
+\end{center}
+
+% =============================================================================
+\end{document}
+% =============================================================================
